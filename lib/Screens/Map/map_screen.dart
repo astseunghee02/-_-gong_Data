@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:async';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  final Completer<GoogleMapController> _controller = Completer();
+  String? _mapError;
+
+  static const CameraPosition _kGooglePlex = CameraPosition(
+    target: LatLng(37.5665, 126.9780), // Default location (Seoul)
+    zoom: 14.4746,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // ------------------ 하단 네비게이션 바 (항상 아래 고정) ------------------
       bottomNavigationBar: SafeArea(
         top: false,
         child: _customBottomNavBar(),
       ),
-
-      // ------------------ 메인 화면 내용 ------------------
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // ---------- 상단 타이틀 영역 ----------
               Padding(
                 padding: const EdgeInsets.only(left: 20, top: 20),
                 child: Row(
@@ -42,7 +51,6 @@ class MapScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const Padding(
                 padding: EdgeInsets.only(left: 20, top: 5),
                 child: Text(
@@ -53,28 +61,62 @@ class MapScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 15),
-
-              // ---------- 지도 구간 ----------
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   width: double.infinity,
                   height: 380,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey[200],
                   ),
-                  child: const Center(
-                    child: Text("여기에 지도 API 들어감"),
-                  ),
+                  child: _mapError != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                              const SizedBox(height: 10),
+                              Text(
+                                '지도를 불러올 수 없습니다',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _mapError!,
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: GoogleMap(
+                            mapType: MapType.normal,
+                            initialCameraPosition: _kGooglePlex,
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: true,
+                            zoomControlsEnabled: false,
+                            compassEnabled: true,
+                            mapToolbarEnabled: false,
+                            onMapCreated: (GoogleMapController controller) {
+                              try {
+                                if (!_controller.isCompleted) {
+                                  _controller.complete(controller);
+                                }
+                              } catch (e) {
+                                setState(() {
+                                  _mapError = e.toString();
+                                });
+                              }
+                            },
+                          ),
+                        ),
                 ),
               ),
-
               const SizedBox(height: 25),
-
-              // ---------- 주변 미션 ----------
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
@@ -85,7 +127,6 @@ class MapScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
               _missionCard(
                 title: "천안삼거리공원 2km 산책",
@@ -93,14 +134,12 @@ class MapScreen extends StatelessWidget {
                 point: "+500P",
               ),
               const SizedBox(height: 15),
-
               _missionCard(
                 title: "XXX체육센터 방문",
                 sub: "미션 목적지까지 300m",
                 point: "+800P",
               ),
-
-              const SizedBox(height: 100),  // 네비바 공간 확보용
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -108,7 +147,6 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-  // ------------------ 미션 카드 위젯 ------------------
   Widget _missionCard({
     required String title,
     required String sub,
@@ -192,7 +230,6 @@ class MapScreen extends StatelessWidget {
     );
   }
 
-  // ------------------ 커스텀 네비게이션 바 ------------------
   Widget _customBottomNavBar() {
     return Container(
       height: 70,
@@ -214,7 +251,7 @@ class MapScreen extends StatelessWidget {
         children: [
           _navIcon("icon_home.png"),
           _navIcon("icon_mission.png"),
-          _navIcon("icon_map.png"),  // 현재 페이지
+          _navIcon("icon_map.png"),
           _navIcon("icon_stats.png"),
           _navIcon("icon_profile.png"),
         ],
