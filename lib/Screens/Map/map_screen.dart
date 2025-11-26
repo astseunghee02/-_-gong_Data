@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 
@@ -12,11 +13,26 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   String? _mapError;
+  String? _mapStyle;
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.5665, 126.9780), // Default location (Seoul)
     zoom: 14.4746,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMapStyle();
+  }
+
+  Future<void> _loadMapStyle() async {
+    try {
+      _mapStyle = await rootBundle.loadString('assets/map_style.json');
+    } catch (e) {
+      print('Failed to load map style: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,10 +117,13 @@ class _MapScreenState extends State<MapScreen> {
                             zoomControlsEnabled: false,
                             compassEnabled: true,
                             mapToolbarEnabled: false,
-                            onMapCreated: (GoogleMapController controller) {
+                            onMapCreated: (GoogleMapController controller) async {
                               try {
                                 if (!_controller.isCompleted) {
                                   _controller.complete(controller);
+                                }
+                                if (_mapStyle != null) {
+                                  await controller.setMapStyle(_mapStyle);
                                 }
                               } catch (e) {
                                 setState(() {
