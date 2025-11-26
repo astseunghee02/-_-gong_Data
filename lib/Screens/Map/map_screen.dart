@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
 class MapScreen extends StatefulWidget {
@@ -14,8 +15,10 @@ class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   String? _mapError;
   String? _mapStyle;
+  LatLng? _currentPosition;
+  bool _isLoadingLocation = true;
 
-  static const CameraPosition _kGooglePlex = CameraPosition(
+  static const CameraPosition _kDefaultPosition = CameraPosition(
     target: LatLng(37.5665, 126.9780), // Default location (Seoul)
     zoom: 14.4746,
   );
@@ -24,6 +27,7 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadMapStyle();
+    _getCurrentLocation();
   }
 
   Future<void> _loadMapStyle() async {
@@ -31,6 +35,65 @@ class _MapScreenState extends State<MapScreen> {
       _mapStyle = await rootBundle.loadString('assets/map_style.json');
     } catch (e) {
       print('Failed to load map style: $e');
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _mapError = '위치 서비스가 비활성화되어 있습니다';
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _mapError = '위치 권한이 거부되었습니다';
+            _isLoadingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _mapError = '위치 권한이 영구적으로 거부되었습니다';
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+      });
+
+      final GoogleMapController controller = await _controller.future;
+      controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _currentPosition!,
+            zoom: 16.0,
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _mapError = '위치를 가져올 수 없습니다: $e';
+        _isLoadingLocation = false;
+      });
     }
   }
 
@@ -111,7 +174,12 @@ class _MapScreenState extends State<MapScreen> {
                           borderRadius: BorderRadius.circular(20),
                           child: GoogleMap(
                             mapType: MapType.normal,
-                            initialCameraPosition: _kGooglePlex,
+                            initialCameraPosition: _currentPosition != null
+                                ? CameraPosition(
+                                    target: _currentPosition!,
+                                    zoom: 16.0,
+                                  )
+                                : _kDefaultPosition,
                             myLocationEnabled: true,
                             myLocationButtonEnabled: true,
                             zoomControlsEnabled: false,
