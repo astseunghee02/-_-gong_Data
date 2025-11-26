@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import '../Mission/mission_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -15,8 +16,11 @@ class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   String? _mapError;
   String? _mapStyle;
+<<<<<<< HEAD
   LatLng? _currentPosition;
   bool _isLoadingLocation = true;
+=======
+>>>>>>> a0ed8f4219256d64949a3876ae506c8ecd205bd3
 
   static const CameraPosition _kDefaultPosition = CameraPosition(
     target: LatLng(37.5665, 126.9780), // Default location (Seoul)
@@ -27,7 +31,10 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadMapStyle();
+<<<<<<< HEAD
     _getCurrentLocation();
+=======
+>>>>>>> a0ed8f4219256d64949a3876ae506c8ecd205bd3
   }
 
   Future<void> _loadMapStyle() async {
@@ -38,6 +45,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+<<<<<<< HEAD
   Future<void> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -97,6 +105,8 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+=======
+>>>>>>> a0ed8f4219256d64949a3876ae506c8ecd205bd3
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -281,24 +291,39 @@ class _MapScreenState extends State<MapScreen> {
             Positioned(
               right: 15,
               top: 12,
-              child: Container(
-                width: 55,
-                height: 25,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  "도전",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MissionScreen(
+                        initialTitle: title,
+                        initialDescription: sub,
+                        initialPoint: point,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 55,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "도전",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
             ),
+
             Positioned(
               right: 15,
               top: 45,
@@ -337,20 +362,32 @@ class _MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _navIcon("icon_home.png"),
-          _navIcon("icon_mission.png"),
-          _navIcon("icon_map.png"),
+          _navIcon(
+            "icon_mission.png",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MissionScreen(), // 그냥 미션 화면
+                ),
+              );
+            },
+          ),
+          _navIcon("icon_map.png"), // 현재 화면
           _navIcon("icon_stats.png"),
           _navIcon("icon_profile.png"),
         ],
       ),
     );
   }
-
-  Widget _navIcon(String fileName) {
-    return Image.asset(
-      "assets/icons/$fileName",
-      width: 45,
-      height: 45,
+  Widget _navIcon(String fileName, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Image.asset(
+        "assets/icons/$fileName",
+        width: 45,
+        height: 45,
+      ),
     );
   }
 }
