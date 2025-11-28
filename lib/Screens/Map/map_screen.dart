@@ -1,6 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../../widgets/app_bottom_nav_items.dart';
+import '../../widgets/custom_bottom_nav_bar.dart';
+import '../Mission/Mission_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -12,6 +18,19 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   String? _mapError;
+  String? _mapStyle;
+  static const List<_MissionPreview> _missionPreviews = [
+    _MissionPreview(
+      title: "천안삼거리공원 2km 산책",
+      subtitle: "미션 목적지까지 150m",
+      point: "+500P",
+    ),
+    _MissionPreview(
+      title: "XXX체육센터 방문",
+      subtitle: "미션 목적지까지 300m",
+      point: "+800P",
+    ),
+  ];
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.5665, 126.9780), // Default location (Seoul)
@@ -19,12 +38,49 @@ class _MapScreenState extends State<MapScreen> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _loadMapStyle();
+  }
+
+  Future<void> _loadMapStyle() async {
+    try {
+      _mapStyle = await rootBundle.loadString('assets/map_style.json');
+    } catch (e) {
+      print('Failed to load map style: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: SafeArea(
         top: false,
-        child: _customBottomNavBar(),
+        child: CustomBottomNavBar(
+          items: buildAppBottomNavItems(
+            context,
+            AppNavDestination.map,
+            overrides: {
+              AppNavDestination.mission: (defaultItem) => BottomNavItem(
+                    assetName: defaultItem.assetName,
+                    isActive: defaultItem.isActive,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MissionScreen(
+                            initialTitle: _missionPreviews.first.title,
+                            initialDescription: _missionPreviews.first.subtitle,
+                            initialPoint: _missionPreviews.first.point,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            },
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -101,10 +157,13 @@ class _MapScreenState extends State<MapScreen> {
                             zoomControlsEnabled: false,
                             compassEnabled: true,
                             mapToolbarEnabled: false,
-                            onMapCreated: (GoogleMapController controller) {
+                            onMapCreated: (GoogleMapController controller) async {
                               try {
                                 if (!_controller.isCompleted) {
                                   _controller.complete(controller);
+                                }
+                                if (_mapStyle != null) {
+                                  await controller.setMapStyle(_mapStyle);
                                 }
                               } catch (e) {
                                 setState(() {
@@ -128,17 +187,14 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              _missionCard(
-                title: "천안삼거리공원 2km 산책",
-                sub: "미션 목적지까지 150m",
-                point: "+500P",
-              ),
-              const SizedBox(height: 15),
-              _missionCard(
-                title: "XXX체육센터 방문",
-                sub: "미션 목적지까지 300m",
-                point: "+800P",
-              ),
+              for (int i = 0; i < _missionPreviews.length; i++) ...[
+                _missionCard(
+                  title: _missionPreviews[i].title,
+                  sub: _missionPreviews[i].subtitle,
+                  point: _missionPreviews[i].point,
+                ),
+                if (i != _missionPreviews.length - 1) const SizedBox(height: 15),
+              ],
               const SizedBox(height: 100),
             ],
           ),
@@ -194,24 +250,39 @@ class _MapScreenState extends State<MapScreen> {
             Positioned(
               right: 15,
               top: 12,
-              child: Container(
-                width: 55,
-                height: 25,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  "도전",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MissionScreen(
+                        initialTitle: title,
+                        initialDescription: sub,
+                        initialPoint: point,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 55,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3C86C0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "도전",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
             ),
+
             Positioned(
               right: 15,
               top: 45,
@@ -219,7 +290,7 @@ class _MapScreenState extends State<MapScreen> {
                 point,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF4D81E7),
+                  color: Color(0xFF3C86C0),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -230,40 +301,16 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _customBottomNavBar() {
-    return Container(
-      height: 70,
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 25),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          )
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _navIcon("icon_home.png"),
-          _navIcon("icon_mission.png"),
-          _navIcon("icon_map.png"),
-          _navIcon("icon_stats.png"),
-          _navIcon("icon_profile.png"),
-        ],
-      ),
-    );
-  }
+}
 
-  Widget _navIcon(String fileName) {
-    return Image.asset(
-      "assets/icons/$fileName",
-      width: 45,
-      height: 45,
-    );
-  }
+class _MissionPreview {
+  final String title;
+  final String subtitle;
+  final String point;
+
+  const _MissionPreview({
+    required this.title,
+    required this.subtitle,
+    required this.point,
+  });
 }
