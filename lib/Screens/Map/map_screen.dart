@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +10,12 @@ import '../../widgets/custom_bottom_nav_bar.dart';
 import '../Mission/Mission_screen.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    super.key,
+    this.highlightedFacilities,
+  });
+
+  final List<MapFacilityHighlight>? highlightedFacilities;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -19,6 +25,8 @@ class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
   String? _mapError;
   String? _mapStyle;
+  Set<Marker> _facilityMarkers = {};
+  late final List<MapFacilityHighlight> _activeFacilities;
   static const List<_MissionPreview> _missionPreviews = [
     _MissionPreview(
       title: "천안삼거리공원 2km 산책",
@@ -31,6 +39,26 @@ class _MapScreenState extends State<MapScreen> {
       point: "+800P",
     ),
   ];
+  static const List<MapFacilityHighlight> _defaultFacilities = [
+    MapFacilityHighlight(
+      name: '중구 체육센터',
+      latitude: 37.564,
+      longitude: 126.9975,
+      description: '도보 10분 내 · 프로그램 3개',
+    ),
+    MapFacilityHighlight(
+      name: '한강 수영장',
+      latitude: 37.5296,
+      longitude: 127.0745,
+      description: '야외 수영 · 인기 수업',
+    ),
+    MapFacilityHighlight(
+      name: '용산 생활체육관',
+      latitude: 37.531,
+      longitude: 126.982,
+      description: '실내 코트 · 예약 가능',
+    ),
+  ];
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.5665, 126.9780), // Default location (Seoul)
@@ -40,6 +68,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    _activeFacilities = widget.highlightedFacilities ?? _defaultFacilities;
     _loadMapStyle();
   }
 
@@ -157,6 +186,7 @@ class _MapScreenState extends State<MapScreen> {
                             zoomControlsEnabled: false,
                             compassEnabled: true,
                             mapToolbarEnabled: false,
+                            markers: _facilityMarkers,
                             onMapCreated: (GoogleMapController controller) async {
                               try {
                                 if (!_controller.isCompleted) {
@@ -165,6 +195,7 @@ class _MapScreenState extends State<MapScreen> {
                                 if (_mapStyle != null) {
                                   await controller.setMapStyle(_mapStyle);
                                 }
+                                _updateFacilityMarkers(controller);
                               } catch (e) {
                                 setState(() {
                                   _mapError = e.toString();
@@ -301,6 +332,70 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _updateFacilityMarkers([GoogleMapController? controller]) {
+    final markers = _activeFacilities
+        .map(
+          (facility) => Marker(
+            markerId: MarkerId('facility_${facility.name}'),
+            position: LatLng(facility.latitude, facility.longitude),
+            infoWindow: InfoWindow(
+              title: facility.name,
+              snippet: facility.description,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure,
+            ),
+          ),
+        )
+        .toSet();
+
+    setState(() {
+      _facilityMarkers = markers;
+    });
+
+    if (markers.isEmpty) {
+      return;
+    }
+
+    Future.microtask(() async {
+      final ctrl = controller ?? await _controller.future;
+      if (!mounted) return;
+      if (_activeFacilities.length == 1) {
+        final target = LatLng(
+          _activeFacilities.first.latitude,
+          _activeFacilities.first.longitude,
+        );
+        await ctrl.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: target, zoom: 15),
+          ),
+        );
+      } else {
+        await ctrl.animateCamera(
+          CameraUpdate.newLatLngBounds(_calculateBounds(), 70),
+        );
+      }
+    });
+  }
+
+  LatLngBounds _calculateBounds() {
+    double minLat = _activeFacilities.first.latitude;
+    double maxLat = _activeFacilities.first.latitude;
+    double minLng = _activeFacilities.first.longitude;
+    double maxLng = _activeFacilities.first.longitude;
+
+    for (final facility in _activeFacilities) {
+      minLat = math.min(minLat, facility.latitude);
+      maxLat = math.max(maxLat, facility.latitude);
+      minLng = math.min(minLng, facility.longitude);
+      maxLng = math.max(maxLng, facility.longitude);
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+  }
 }
 
 class _MissionPreview {
@@ -312,5 +407,19 @@ class _MissionPreview {
     required this.title,
     required this.subtitle,
     required this.point,
+  });
+}
+
+class MapFacilityHighlight {
+  final String name;
+  final double latitude;
+  final double longitude;
+  final String? description;
+
+  const MapFacilityHighlight({
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    this.description,
   });
 }
