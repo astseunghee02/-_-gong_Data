@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../widgets/app_bottom_nav_items.dart';
+import '../../widgets/community_sections.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
 class StatusScreen extends StatelessWidget {
@@ -57,6 +58,8 @@ class StatusScreen extends StatelessWidget {
                     _SummaryStatsRow(),
                     SizedBox(height: 24),
                     _ExerciseLevelSection(),
+                    SizedBox(height: 16),
+                    _StatusFitnessComparisonSection(),
                     SizedBox(height: 24),
                   ],
                 ),
@@ -488,6 +491,31 @@ class _ExerciseCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusFitnessComparisonSection extends StatelessWidget {
+  const _StatusFitnessComparisonSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: const FitnessComparisonBlock(
+        data: defaultFitnessComparison,
       ),
     );
   }
