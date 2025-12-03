@@ -14,27 +14,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // 온보딩 페이지 정보
   final List<_OnboardingPageData> _pages = [
     _OnboardingPageData(
-      backgroundColor: const Color(0xFF5BBFF8),
-      title: 'Drops Water Tracker',
-      subtitle: 'Stay hydrated and track your daily water intake',
+      backgroundColor: Colors.white,
+      title: '당신의 운동을 더 재미있게!',
+      subtitle: '공공체육시설 정보와 운동 데이터를 기반으로\n매일 달라지는 운동 미션을 제공합니다',
       isSplash: true,
     ),
     _OnboardingPageData(
       backgroundColor: Colors.white,
-      title: 'Track your daily water\nintake with Us.',
-      subtitle: 'Achieve your hydration goals with a simple tap!',
+      title: '운동할수록 캐릭터가 성장해요',
+      subtitle: '걸음수·러닝·운동 인증을 하면 당신의 캐릭터가 점점 강해집니다.!',
     ),
     _OnboardingPageData(
       backgroundColor: Colors.white,
-      title: 'Smart Reminders\nTailored to You',
+      title: '오늘 할 운동을 추천받고, 인증하세요',
       subtitle:
-      'Quick and easy to set your hydration goal\nand track your daily intake progress.',
+      '위치 기반 루트, 공공체육시설 프로그램 그리고 GPS로 간단 인증!',
     ),
     _OnboardingPageData(
       backgroundColor: Colors.white,
-      title: 'Easy to Use – Drink, Tap, Repeat',
+      title: '핏메이트, 포리와 함께 운동을 시작해보세요',
       subtitle:
-      'Staying hydrated every day is easy\nwith Drops Water Tracker.',
+      '오늘의 운동 완료 → 포인트 적립 → 레벨업!',
       isLast: true,
     ),
   ];
@@ -76,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     icon: const Icon(
                       Icons.arrow_back_ios_new_rounded,
                       size: 20,
-                      color: Colors.lightBlue,
+                      color: Color(0xFF3C86C0),
                     ),
                     onPressed: () {
                       _pageController.previousPage(
@@ -108,24 +108,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 40),
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(60),
-                          ),
-                          child: const Icon(
-                            Icons.opacity, // 물방울 아이콘
-                            color: Colors.white,
-                            size: 70,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(40),
+                          child: Image.asset(
+                            'assets/images/Lv01_pori.png',
+                            width: 220,
+                            height: 220,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 36),
                         Text(
                           data.title,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: Colors.black,
                             fontSize: 22,
                             fontWeight: FontWeight.w600,
                           ),
@@ -135,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           data.subtitle,
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Colors.black,
                             fontSize: 13,
                           ),
                           textAlign: TextAlign.center,
@@ -166,7 +162,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           data.subtitle,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: Colors.grey,
+                            color: Colors.black,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -179,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // ------ 인디케이터 + 버튼 ------
             Container(
-              color: page.isSplash ? const Color(0xFF5BBFF8) : Colors.white,
+              color: Colors.white,
               padding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(
@@ -197,7 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         height: 4,
                         decoration: BoxDecoration(
                           color: _currentPage == index
-                              ? Colors.lightBlue
+                              ? const Color(0xFF3C86C0)
                               : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -212,8 +208,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _goNext,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5BBFF8),
-                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -224,6 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
+                          color: Colors.black,
                         ),
                       ),
                     ),

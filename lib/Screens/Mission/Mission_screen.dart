@@ -28,7 +28,7 @@ class MissionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '미션 리소스',
+                '운동 가이드',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,

@@ -79,7 +79,7 @@ class _WeatherBanner extends StatelessWidget {
                 Text(
                   dateString,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 15,
                     color: Colors.black54,
                   ),
                 ),
@@ -118,6 +118,8 @@ class _WeatherBanner extends StatelessWidget {
   }
 }
 
+const double _characterHighlightSize = 350;
+
 class _CharacterCard extends StatelessWidget {
   final _CharacterStatusData data;
 
@@ -141,7 +143,7 @@ class _CharacterCard extends StatelessWidget {
     ];
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -155,55 +157,43 @@ class _CharacterCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '오늘의 캐릭터',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      data.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Lv.${data.level}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black45,
-                      ),
-                    ),
-                  ],
+          Align(
+            alignment: Alignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  data.name,
+                  style: const TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              Container(
-                height: 70,
-                width: 70,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE3F6F5),
+                const SizedBox(height: 3),
+                Text(
+                  'Lv.${data.level}',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    color: Colors.black45,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
                   borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/pori-user.png',
+                    height: _characterHighlightSize,
+                    width: _characterHighlightSize,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.self_improvement,
-                  size: 34,
-                  color: Color(0xFF3C86C0),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 48),
           Row(
             children: stats
                 .map(

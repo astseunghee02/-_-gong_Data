@@ -55,7 +55,7 @@ class SignupProfileShell extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black87,
+                            color: signupAccentColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -100,7 +100,7 @@ class SignupProfileHero extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Colors.black87,
+            color: signupAccentColor,
           ),
         ),
       ],

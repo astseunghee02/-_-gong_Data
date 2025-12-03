@@ -192,7 +192,7 @@ class AuthScreenLayout extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black87,
+                            color: _accentColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -236,7 +236,7 @@ class _AuthHero extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Colors.black87,
+            color: _accentColor,
           ),
         ),
       ],

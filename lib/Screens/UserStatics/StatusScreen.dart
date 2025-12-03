@@ -33,7 +33,7 @@ class StatusScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '나의 상태',
+                  '운동 리포트',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -47,8 +47,6 @@ class StatusScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    _CharacterStatusCard(),
-                    SizedBox(height: 16),
                     _DateSelector(),
                     SizedBox(height: 16),
                     _MapPreviewCard(),
@@ -58,7 +56,7 @@ class StatusScreen extends StatelessWidget {
                     _SummaryStatsRow(),
                     SizedBox(height: 24),
                     _ExerciseLevelSection(),
-                    SizedBox(height: 16),
+                    SizedBox(height: 80 / 3),
                     _StatusFitnessComparisonSection(),
                     SizedBox(height: 24),
                   ],
@@ -68,108 +66,6 @@ class StatusScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _CharacterStatusCard extends StatelessWidget {
-  const _CharacterStatusCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 120,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Text(
-                  '탱구리님의 상태',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    _InfoColumn(label: '키', value: '178 cm'),
-                    SizedBox(width: 12),
-                    _InfoColumn(label: '몸무게', value: '70 kg'),
-                  ],
-                ),
-                SizedBox(height: 4),
-                Row(
-                  children: [
-                    _InfoColumn(label: '체지방', value: '65%'),
-                    SizedBox(width: 12),
-                    _InfoColumn(label: '레벨', value: 'Lv.3'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F4FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Image.asset(
-              'assets/images/pori.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoColumn extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoColumn({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.black45,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -192,11 +88,14 @@ class _DateSelectorState extends State<_DateSelector> {
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+    final picked = await showDialog<DateTime>(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
+      barrierDismissible: true,
+      builder: (context) => _CustomDatePickerDialog(
+        initialDate: _selectedDate,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2035),
+      ),
     );
     if (picked != null) {
       setState(() {
@@ -267,6 +166,126 @@ class _DateSelectorState extends State<_DateSelector> {
   }
 }
 
+class _CustomDatePickerDialog extends StatefulWidget {
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  const _CustomDatePickerDialog({
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  @override
+  State<_CustomDatePickerDialog> createState() => _CustomDatePickerDialogState();
+}
+
+class _CustomDatePickerDialogState extends State<_CustomDatePickerDialog> {
+  static const Color accentColor = Color(0xFF3C86C0);
+  late DateTime _tempSelectedDate = widget.initialDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 20,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '날짜 선택',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Theme(
+                data: theme.copyWith(
+                  colorScheme: theme.colorScheme.copyWith(
+                    primary: accentColor,
+                    onPrimary: Colors.white,
+                    surface: Colors.white,
+                    onSurface: Colors.black87,
+                  ),
+                  textTheme: theme.textTheme.apply(
+                    bodyColor: Colors.black87,
+                    displayColor: Colors.black87,
+                  ),
+                ),
+                child: CalendarDatePicker(
+                  initialDate: _tempSelectedDate,
+                  firstDate: widget.firstDate,
+                  lastDate: widget.lastDate,
+                  onDateChanged: (date) {
+                    setState(() {
+                      _tempSelectedDate = date;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black54,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: const Text('취소'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(_tempSelectedDate),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '확인',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MapPreviewCard extends StatelessWidget {
   const _MapPreviewCard();
 
@@ -314,7 +333,7 @@ class _StepCountSection extends StatelessWidget {
           Text(
             '걸음 수',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 17  ,
               color: Colors.black54,
             ),
             textAlign: TextAlign.center,
@@ -357,7 +376,7 @@ class _SummaryItem extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 10,
+            fontSize: 13,
             color: Colors.black45,
           ),
           textAlign: TextAlign.center,
@@ -366,7 +385,7 @@ class _SummaryItem extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 17,
             fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
@@ -383,64 +402,79 @@ class _ExerciseLevelSection extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color blue = Color(0xFF3C86C0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '오늘의 운동 정도',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            SizedBox(
-              width: 110,
-              height: 110,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 110,
-                    height: 110,
-                    child: CircularProgressIndicator(
-                      value: 0.78,
-                      strokeWidth: 10,
-                      backgroundColor: const Color(0xFFE5E9F2),
-                      valueColor: const AlwaysStoppedAnimation<Color>(blue),
-                    ),
-                  ),
-                  const Text(
-                    '78점',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '오늘의 운동 정도',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                children: const [
-                  _ExerciseCard(
-                    title: '동일 연령대 평균 대비 운동량',
-                    value: '+12%',
-                  ),
-                  SizedBox(height: 8),
-                  _ExerciseCard(
-                    title: '오늘 활동 난이도',
-                    value: '중간',
-                  ),
-                ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              SizedBox(
+                width: 110,
+                height: 110,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      height: 110,
+                      child: CircularProgressIndicator(
+                        value: 0.78,
+                        strokeWidth: 10,
+                        backgroundColor: const Color(0xFFE5E9F2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(blue),
+                      ),
+                    ),
+                    const Text(
+                      '78점',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: const [
+                    _ExerciseCard(
+                      title: '동일 연령대 평균 대비 운동량',
+                      value: '+12%',
+                    ),
+                    SizedBox(height: 8),
+                    _ExerciseCard(
+                      title: '오늘 활동 난이도',
+                      value: '중간',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -460,6 +494,7 @@ class _ExerciseCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: Border.all(color: const Color(0xFFE0E0E0)),
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
