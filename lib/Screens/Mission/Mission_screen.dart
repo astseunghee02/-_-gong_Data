@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/app_colors.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/community_sections.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -11,7 +12,7 @@ class MissionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FB),
+      backgroundColor: AppColors.background,
       bottomNavigationBar: SafeArea(
         top: false,
         child: CustomBottomNavBar(

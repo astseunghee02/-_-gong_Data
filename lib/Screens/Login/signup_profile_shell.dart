@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/app_colors.dart';
+
 const Color signupAccentColor = Color(0xFF3C86C0);
 
 class SignupProfileShell extends StatelessWidget {
@@ -21,14 +23,16 @@ class SignupProfileShell extends StatelessWidget {
     final padding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Container(
-          color: Colors.white,
+          color: AppColors.background,
           child: Column(
             children: [
               const SizedBox(height: 16),
               const SignupProfileHero(),
+              const SizedBox(height: 4),
+              const _BackToLoginButton(),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -104,6 +108,43 @@ class SignupProfileHero extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BackToLoginButton extends StatelessWidget {
+  const _BackToLoginButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.center,
+      child: TextButton.icon(
+        onPressed: () {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/login',
+            (route) => false,
+          );
+        },
+        icon: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 16,
+          color: signupAccentColor,
+        ),
+        label: const Text(
+          '로그인으로 돌아가기',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: signupAccentColor,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: signupAccentColor,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
     );
   }
 }

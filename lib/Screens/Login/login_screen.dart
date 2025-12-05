@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/app_colors.dart';
 import '../Home/home_screen.dart';
 import 'signup_profile_step_1.dart';
 import 'signup_profile_step.dart';
@@ -104,11 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(foregroundColor: _accentDark),
-                  child: const Text('비밀번호 찾기'),
-                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -158,10 +154,10 @@ class AuthScreenLayout extends StatelessWidget {
     final padding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Container(
-          color: Colors.white,
+          color: AppColors.background,
           child: Column(
             children: [
               const SizedBox(height: 16),

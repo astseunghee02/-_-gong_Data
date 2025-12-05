@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/app_colors.dart';
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -14,24 +16,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // 온보딩 페이지 정보
   final List<_OnboardingPageData> _pages = [
     _OnboardingPageData(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       title: '당신의 운동을 더 재미있게!',
       subtitle: '공공체육시설 정보와 운동 데이터를 기반으로\n매일 달라지는 운동 미션을 제공합니다',
       isSplash: true,
     ),
     _OnboardingPageData(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       title: '운동할수록 캐릭터가 성장해요',
       subtitle: '걸음수·러닝·운동 인증을 하면 당신의 캐릭터가 점점 강해집니다.!',
     ),
     _OnboardingPageData(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       title: '오늘 할 운동을 추천받고, 인증하세요',
       subtitle:
       '위치 기반 루트, 공공체육시설 프로그램 그리고 GPS로 간단 인증!',
     ),
     _OnboardingPageData(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       title: '핏메이트, 포리와 함께 운동을 시작해보세요',
       subtitle:
       '오늘의 운동 완료 → 포인트 적립 → 레벨업!',
@@ -175,7 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // ------ 인디케이터 + 버튼 ------
             Container(
-              color: Colors.white,
+              color: AppColors.background,
               padding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(

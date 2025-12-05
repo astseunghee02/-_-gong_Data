@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../constants/app_colors.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/community_sections.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -12,10 +13,8 @@ class StatusScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFFF5F5F5);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: SafeArea(
         top: false,
         child: CustomBottomNavBar(
