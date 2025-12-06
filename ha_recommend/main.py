@@ -11,13 +11,7 @@ app = FastAPI(title="Exercise Recommendation API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost",
-        "http://127.0.0.1:53195",  # Flutter 웹이 뜨는 주소(포트는 다를 수 있음)
-        "http://localhost:53195",
-        "http://127.0.0.1:8000",   # 필요하면 추가
-        "*",                       # 개발 중이면 그냥 전체 허용해도 됨
-    ],
+    allow_origins=["*"],   # ← 이걸로 해결
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
