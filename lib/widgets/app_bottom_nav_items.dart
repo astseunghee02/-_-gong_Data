@@ -92,9 +92,30 @@ BottomNavItem _buildItem({
     onTap: destination == current
         ? null
         : () {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => builder()),
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => builder(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(0.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOut;
+
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeInOut,
+                    ),
+                  );
+
+                  return FadeTransition(
+                    opacity: fadeAnimation,
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 200),
+              ),
             );
           },
   );

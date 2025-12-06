@@ -1,4 +1,4 @@
-package com.example.flutter_project
+package com.gongdata.app
 
 import io.flutter.embedding.android.FlutterActivity
 

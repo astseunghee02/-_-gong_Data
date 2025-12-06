@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'Screens/OnBoarding/onboarding_screen.dart';
 import 'Screens/Login/login_screen.dart';
 import 'Screens/Home/home_screen.dart';
 
-void main() {
+Future<void> main() async {
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
 }
 

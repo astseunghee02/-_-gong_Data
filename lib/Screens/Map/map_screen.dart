@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
+import '../../services/location_service.dart';
 import '../Mission/Mission_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -17,16 +19,23 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   String? _mapError;
   String? _mapStyle;
+  GoogleMapController? _mapController;
+  final LocationService _locationService = LocationService();
 
-  static const CameraPosition _kGooglePlex = CameraPosition(
+  // 초기 카메라 위치 (서울 기본값)
+  CameraPosition _initialCameraPosition = const CameraPosition(
     target: LatLng(37.5665, 126.9780),
     zoom: 14.4746,
   );
+
+  Position? _currentPosition;
+  bool _isLoadingLocation = true;
 
   @override
   void initState() {
     super.initState();
     _loadMapStyle();
+    _loadCurrentLocation();
   }
 
   Future<void> _loadMapStyle() async {
@@ -34,6 +43,45 @@ class _MapScreenState extends State<MapScreen> {
       _mapStyle = await rootBundle.loadString('assets/map_style.json');
     } catch (e) {
       debugPrint('Failed to load map style: ');
+    }
+  }
+
+  /// 현재 위치 가져오기 및 지도 이동
+  Future<void> _loadCurrentLocation() async {
+    print('📍 현재 위치를 가져오는 중...');
+
+    final position = await _locationService.getCurrentLocation();
+
+    if (position != null) {
+      setState(() {
+        _currentPosition = position;
+        _isLoadingLocation = false;
+        _initialCameraPosition = CameraPosition(
+          target: LatLng(position.latitude, position.longitude),
+          zoom: 15.0,
+        );
+      });
+
+      // 터미널에 경도/위도 출력
+      print('✅ 위치 정보 수신 완료!');
+      print('📌 위도(Latitude): ${position.latitude}');
+      print('📌 경도(Longitude): ${position.longitude}');
+      print('🎯 정확도(Accuracy): ${position.accuracy}m');
+      print('⏰ 시간: ${DateTime.now()}');
+      print('─' * 50);
+
+      // 지도 카메라를 현재 위치로 이동
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(_initialCameraPosition),
+        );
+      }
+    } else {
+      setState(() {
+        _isLoadingLocation = false;
+      });
+      print('❌ 위치 정보를 가져올 수 없습니다.');
+      print('⚠️  위치 권한을 확인하거나 GPS를 활성화해주세요.');
     }
   }
 
@@ -107,25 +155,73 @@ class _MapScreenState extends State<MapScreen> {
                         )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(20),
-                          child: GoogleMap(
-                            mapType: MapType.normal,
-                            initialCameraPosition: _kGooglePlex,
-                            myLocationEnabled: true,
-                            myLocationButtonEnabled: true,
-                            zoomControlsEnabled: false,
-                            compassEnabled: true,
-                            mapToolbarEnabled: false,
-                            onMapCreated: (GoogleMapController controller) async {
-                              try {
-                                if (_mapStyle != null) {
-                                  await controller.setMapStyle(_mapStyle);
-                                }
-                              } catch (e) {
-                                setState(() {
-                                  _mapError = e.toString();
-                                });
-                              }
-                            },
+                          child: Stack(
+                            children: [
+                              GoogleMap(
+                                mapType: MapType.normal,
+                                initialCameraPosition: _initialCameraPosition,
+                                myLocationEnabled: true,
+                                myLocationButtonEnabled: true,
+                                zoomControlsEnabled: false,
+                                compassEnabled: true,
+                                mapToolbarEnabled: false,
+                                onMapCreated: (GoogleMapController controller) async {
+                                  _mapController = controller;
+                                  try {
+                                    if (_mapStyle != null) {
+                                      await controller.setMapStyle(_mapStyle);
+                                    }
+                                    // 위치를 이미 가져왔다면 카메라 이동
+                                    if (_currentPosition != null) {
+                                      controller.animateCamera(
+                                        CameraUpdate.newCameraPosition(_initialCameraPosition),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setState(() {
+                                      _mapError = e.toString();
+                                    });
+                                  }
+                                },
+                              ),
+                              // 위치 로딩 중 표시
+                              if (_isLoadingLocation)
+                                Container(
+                                  color: Colors.black26,
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        CircularProgressIndicator(
+                                          color: Colors.white,
+                                        ),
+                                        SizedBox(height: 12),
+                                        Text(
+                                          '현재 위치를 찾는 중...',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              // 새로고침 버튼
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: FloatingActionButton.small(
+                                  onPressed: _loadCurrentLocation,
+                                  backgroundColor: Colors.white,
+                                  child: const Icon(
+                                    Icons.my_location,
+                                    color: Color(0xFF3C86C0),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                 ),
