@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git checkout:*)",
-      "Bash(iconv:*)"
+      "Bash(iconv:*)",
+      "Bash(flutter run:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

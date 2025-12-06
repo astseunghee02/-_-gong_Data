@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../constants/app_colors.dart';
+import '../../data/user_progress_controller.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../services/location_service.dart';
@@ -88,7 +90,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: SafeArea(
         top: false,
         child: CustomBottomNavBar(
@@ -271,21 +273,21 @@ class _MissionStatsPanel extends StatelessWidget {
         children: [
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.completed),
-              label: '완료',
+              value: formatter.format(data.ongoing),
+              label: '진행중',
             ),
           ),
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.ongoing),
-              label: '진행중',
+              value: formatter.format(data.weeklyCompleted),
+              label: '이번주 완료',
               showDivider: true,
             ),
           ),
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.points),
-              label: '포인트',
+              value: formatter.format(data.totalCompleted),
+              label: '총 완료',
             ),
           ),
         ],
@@ -341,21 +343,21 @@ class _MissionStatTile extends StatelessWidget {
 }
 
 class _MissionStats {
-  final int completed;
   final int ongoing;
-  final int points;
+  final int weeklyCompleted;
+  final int totalCompleted;
 
   const _MissionStats({
-    required this.completed,
     required this.ongoing,
-    required this.points,
+    required this.weeklyCompleted,
+    required this.totalCompleted,
   });
 }
 
 const _MissionStats _missionStats = _MissionStats(
-  completed: 12,
   ongoing: 5,
-  points: 2450,
+  weeklyCompleted: 3,
+  totalCompleted: 48,
 );
 
 class _MissionFeaturePanel extends StatefulWidget {
@@ -371,6 +373,14 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
       List<_MissionProgressItem>.from(_defaultOngoingMissions);
   final List<_MissionItem> _availableMissions =
       List<_MissionItem>.from(_defaultAvailableMissions);
+
+  void _handleMissionComplete(_MissionProgressItem mission) {
+    UserProgressController.instance
+        .addMissionCompletion(points: mission.pointValue);
+    setState(() {
+      _ongoingMissions.remove(mission);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -428,13 +438,11 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
       else
         ..._ongoingMissions.map(
           (mission) => _MissionOngoingCard(
-            data: mission,
-            onComplete: mission.progress >= 1.0
-                ? () => setState(() {
-                      _ongoingMissions.remove(mission);
-                    })
-                : null,
-          ),
+                data: mission,
+                onComplete: mission.progress >= 1.0
+                    ? () => _handleMissionComplete(mission)
+                    : null,
+              ),
         ),
       const SizedBox(height: 32),
     ];
@@ -463,6 +471,7 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
                   title: mission.title,
                   description: mission.description,
                   pointText: mission.pointText,
+                  pointValue: mission.pointValue,
                   progress: 0.1,
                 ),
               );
@@ -552,12 +561,14 @@ class _MissionProgressItem {
   final String title;
   final String description;
   final String pointText;
+  final int pointValue;
   final double progress;
 
   const _MissionProgressItem({
     required this.title,
     required this.description,
     required this.pointText,
+    required this.pointValue,
     this.progress = 0.2,
   });
 }
@@ -566,11 +577,13 @@ class _MissionItem {
   final String title;
   final String description;
   final String pointText;
+  final int pointValue;
 
   const _MissionItem({
     required this.title,
     required this.description,
     required this.pointText,
+    required this.pointValue,
   });
 }
 
@@ -796,6 +809,7 @@ const List<_MissionProgressItem> _defaultOngoingMissions = [
     title: '~~~ 30분 산책',
     description: '~~~ 근처에서 30분 이상 이동하기',
     pointText: '+500P',
+    pointValue: 500,
     progress: 0.6,
   ),
 ];
@@ -805,10 +819,12 @@ const List<_MissionItem> _defaultAvailableMissions = [
     title: '공원 3곳 탐방하기',
     description: '천안 동남구 내 공원 3곳 도달',
     pointText: '+750P',
+    pointValue: 750,
   ),
   _MissionItem(
     title: '인근 체육시설 방문',
     description: '인근 공원·체육시설 중 1곳 도착',
     pointText: '+900P',
+    pointValue: 900,
   ),
 ];

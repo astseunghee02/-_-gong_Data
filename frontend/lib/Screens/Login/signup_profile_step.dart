@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'signup_profile_shell.dart';
 
@@ -13,30 +14,45 @@ class SignupProfileStep extends StatefulWidget {
 
 class _SignupProfileStepState extends State<SignupProfileStep> {
   Gender _selectedGender = Gender.female;
-  double _age = 25;
-  double _weight = 60;
-  double _height = 165;
+  final TextEditingController _ageController =
+      TextEditingController(text: '25');
+  final TextEditingController _weightController =
+      TextEditingController(text: '60');
+  final TextEditingController _heightController =
+      TextEditingController(text: '165');
+
+  @override
+  void dispose() {
+    _ageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    super.dispose();
+  }
 
   void _handleNext() {
+    final age = int.tryParse(_ageController.text) ?? 0;
+    final weight = double.tryParse(_weightController.text) ?? 0;
+    final height = double.tryParse(_heightController.text) ?? 0;
+
     debugPrint('선택한 성별: $_selectedGender');
-    debugPrint('나이: ${_age.round()}');
-    debugPrint('몸무게: ${_weight.round()}');
-    debugPrint('키: ${_height.round()}');
-    // TODO: 다음 단계로 이동하거나 서버 연동 로직을 연결하세요.
+    debugPrint('나이: $age');
+    debugPrint('몸무게: $weight');
+    debugPrint('키: $height');
+    // TODO: 다음 단계로 이동하거나 서버 연동 로직을 연결해주세요.
   }
 
   @override
   Widget build(BuildContext context) {
     return SignupProfileShell(
-      title: '프로필을 완성해 주세요',
-      subtitle: '나이, 신체 정보를 입력하면 맞춤형 플랜을 준비해 드릴게요.',
+      title: '프로필을 완성해주세요',
+      subtitle: '나이, 신체 정보 등을 입력하면 맞춤형 추천을 받을 수 있어요.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SignupStepIndicator(current: 2, total: 2),
           const SizedBox(height: 24),
           const Text(
-            '성별을 선택해 주세요',
+            '성별을 선택해주세요',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -75,31 +91,25 @@ class _SignupProfileStepState extends State<SignupProfileStep> {
             ],
           ),
           const SizedBox(height: 24),
-          _ProfileSliderCard(
+          _ProfileInputCard(
             title: '나이를 알려주세요',
-            valueLabel: '${_age.round()} 세',
-            value: _age,
-            min: 10,
-            max: 100,
-            onChanged: (value) => setState(() => _age = value),
+            controller: _ageController,
+            suffixText: '세',
+            hintText: '25',
           ),
           const SizedBox(height: 18),
-          _ProfileSliderCard(
+          _ProfileInputCard(
             title: '몸무게를 알려주세요',
-            valueLabel: '${_weight.round()} kg',
-            value: _weight,
-            min: 30,
-            max: 200,
-            onChanged: (value) => setState(() => _weight = value),
+            controller: _weightController,
+            suffixText: 'kg',
+            hintText: '60',
           ),
           const SizedBox(height: 18),
-          _ProfileSliderCard(
+          _ProfileInputCard(
             title: '키를 알려주세요',
-            valueLabel: '${_height.round()} cm',
-            value: _height,
-            min: 120,
-            max: 220,
-            onChanged: (value) => setState(() => _height = value),
+            controller: _heightController,
+            suffixText: 'cm',
+            hintText: '165',
           ),
         ],
       ),
@@ -112,7 +122,7 @@ class _SignupProfileStepState extends State<SignupProfileStep> {
                 foregroundColor: signupAccentColor,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: const Text('돌아가기'),
+              child: const Text('뒤로가기'),
             ),
           ),
           const SizedBox(width: 12),
@@ -131,7 +141,7 @@ class _SignupProfileStepState extends State<SignupProfileStep> {
                   borderRadius: BorderRadius.circular(18),
                 ),
               ),
-              child: const Text('완료'),
+              child: const Text('다음'),
             ),
           ),
         ],
@@ -214,21 +224,17 @@ class _GenderCard extends StatelessWidget {
   }
 }
 
-class _ProfileSliderCard extends StatelessWidget {
+class _ProfileInputCard extends StatelessWidget {
   final String title;
-  final String valueLabel;
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
+  final TextEditingController controller;
+  final String suffixText;
+  final String hintText;
 
-  const _ProfileSliderCard({
+  const _ProfileInputCard({
     required this.title,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
+    required this.controller,
+    required this.suffixText,
+    required this.hintText,
   });
 
   @override
@@ -251,43 +257,33 @@ class _ProfileSliderCard extends StatelessWidget {
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            valueLabel,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
-          ),
           const SizedBox(height: 12),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: signupAccentColor,
-              inactiveTrackColor: const Color(0xFFE3ECF7),
-              thumbColor: Colors.white,
-              overlayColor: signupAccentColor.withOpacity(0.15),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
-            ),
-            child: Slider(
-              value: value,
-              min: min,
-              max: max,
-              onChanged: onChanged,
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                min.toInt().toString(),
-                style: const TextStyle(fontSize: 12, color: Colors.black45),
-              ),
-              Text(
-                max.toInt().toString(),
-                style: const TextStyle(fontSize: 12, color: Colors.black45),
-              ),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
+            decoration: InputDecoration(
+              hintText: hintText,
+              suffixText: suffixText,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: signupAccentColor, width: 1.2),
+              ),
+            ),
           ),
         ],
       ),

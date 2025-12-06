@@ -1,4 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
+import '../../data/user_progress_controller.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
@@ -8,32 +12,50 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel = _formatKoreanDate(DateTime.now());
+    final motivationMessage = _getRandomMotivationMessage();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FB),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: CustomBottomNavBar(
-          items: buildAppBottomNavItems(
-            context,
-            AppNavDestination.home,
+    return ValueListenableBuilder<UserProgressState>(
+      valueListenable: UserProgressController.instance.notifier,
+      builder: (context, progressState, _) {
+        final characterData = _applyMissionExperience(
+          _applyInactivityPenalty(
+            _characterStatus,
+            progressState.completionHistory,
           ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _WeatherBanner(dateString: dateLabel, weather: _homeWeather),
-              const SizedBox(height: 16),
-              const _CharacterCard(data: _characterStatus),
-              const SizedBox(height: 24),
-            ],
+          progressState.missionPoints,
+        );
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: CustomBottomNavBar(
+              items: buildAppBottomNavItems(
+                context,
+                AppNavDestination.home,
+              ),
+            ),
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _WeatherBanner(
+                    dateString: dateLabel,
+                    weather: _homeWeather,
+                    message: motivationMessage,
+                  ),
+                  const SizedBox(height: 16),
+                  _CharacterCard(data: characterData),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -41,10 +63,12 @@ class HomeScreen extends StatelessWidget {
 class _WeatherBanner extends StatelessWidget {
   final String dateString;
   final _WeatherInfo weather;
+  final String message;
 
   const _WeatherBanner({
     required this.dateString,
     required this.weather,
+    required this.message,
   });
 
   @override
@@ -84,9 +108,9 @@ class _WeatherBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  '오늘도 공공체육과 함께 활기차게!',
-                  style: TextStyle(
+                Text(
+                  message,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -104,7 +128,7 @@ class _WeatherBanner extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${weather.temperature}°C',
+                '${weather.temperature}${String.fromCharCode(0x00B0)}C',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -118,7 +142,10 @@ class _WeatherBanner extends StatelessWidget {
   }
 }
 
-const double _characterHighlightSize = 350;
+const double _characterHighlightSize = 233;
+const Color _levelGaugeColor = Color(0xFFFFB74D);
+const int _maxLevel = 50;
+const Duration _inactivityThreshold = Duration(days: 7);
 
 class _CharacterCard extends StatelessWidget {
   final _CharacterStatusData data;
@@ -127,21 +154,6 @@ class _CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const stats = [
-      _StatMeterData(
-        label: '상체',
-        value: _MetricValue.health,
-      ),
-      _StatMeterData(
-        label: '하체',
-        value: _MetricValue.energy,
-      ),
-      _StatMeterData(
-        label: '코어',
-        value: _MetricValue.defense,
-      ),
-    ];
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       decoration: BoxDecoration(
@@ -194,82 +206,73 @@ class _CharacterCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 48),
-          Row(
-            children: stats
-                .map(
-                  (stat) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: stat == stats.last ? 0 : 10,
-                      ),
-                      child: _StatMeter(
-                        label: stat.label,
-                        value: stat.value.extractValue(data),
-                        color: stat.value.color,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
+          _LevelGauge(data: data),
         ],
       ),
     );
   }
 }
 
-class _StatMeter extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color color;
+class _LevelGauge extends StatelessWidget {
+  final _CharacterStatusData data;
 
-  const _StatMeter({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _LevelGauge({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.circle,
-              size: 8,
-              color: color,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
+    final progress = _calculateLevelProgress(data);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '레벨 게이지',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+              Text(
+                'Lv.${data.level} / $_maxLevel',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: LinearProgressIndicator(
+              value: progress.ratio,
+              minHeight: 14,
+              backgroundColor: const Color(0xFFE7EBF3),
+              valueColor: const AlwaysStoppedAnimation<Color>(_levelGaugeColor),
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: LinearProgressIndicator(
-            value: value / 100,
-            minHeight: 6,
-            backgroundColor: const Color(0xFFE7EBF3),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$value%',
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.black45,
+          const SizedBox(height: 10),
+          Text(
+            progress.isMaxLevel
+                ? '최대 레벨에 도달했어요'
+                : '다음 레벨까지 ${progress.pointsToNext} 포인트 필요',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -289,48 +292,73 @@ enum _WeatherCondition { sunny, cloudy, rainy }
 class _CharacterStatusData {
   final String name;
   final int level;
-  final int health;
-  final int energy;
-  final int defense;
+  final int experience;
 
   const _CharacterStatusData({
     required this.name,
     required this.level,
-    required this.health,
-    required this.energy,
-    required this.defense,
+    required this.experience,
   });
-}
 
-enum _MetricValue {
-  health(Color(0xFFE57373)),
-  energy(Color(0xFFFFB74D)),
-  defense(Color(0xFF64B5F6));
-
-  final Color color;
-
-  const _MetricValue(this.color);
-
-  int extractValue(_CharacterStatusData data) {
-    switch (this) {
-      case _MetricValue.health:
-        return data.health;
-      case _MetricValue.energy:
-        return data.energy;
-      case _MetricValue.defense:
-        return data.defense;
-    }
+  _CharacterStatusData copyWith({
+    String? name,
+    int? level,
+    int? experience,
+  }) {
+    return _CharacterStatusData(
+      name: name ?? this.name,
+      level: level ?? this.level,
+      experience: experience ?? this.experience,
+    );
   }
 }
 
-class _StatMeterData {
-  final String label;
-  final _MetricValue value;
+class _LevelProgressData {
+  final double ratio;
+  final bool isMaxLevel;
+  final int pointsToNext;
 
-  const _StatMeterData({
-    required this.label,
-    required this.value,
+  const _LevelProgressData({
+    required this.ratio,
+    required this.isMaxLevel,
+    required this.pointsToNext,
   });
+}
+
+_LevelProgressData _calculateLevelProgress(_CharacterStatusData data) {
+  final currentLevel = data.level.clamp(1, _maxLevel);
+  final isMaxLevel = currentLevel >= _maxLevel;
+  final currentFloor = _requiredPointsForLevel(currentLevel);
+  final nextFloor =
+      isMaxLevel ? currentFloor : _requiredPointsForLevel(currentLevel + 1);
+
+  final safeExperience = isMaxLevel
+      ? currentFloor.toDouble()
+      : data.experience.clamp(currentFloor, nextFloor).toDouble();
+  final totalSpan = nextFloor - currentFloor;
+  final ratio = isMaxLevel
+      ? 1.0
+      : totalSpan <= 0
+          ? 0.0
+          : (safeExperience - currentFloor) / totalSpan;
+  final remainingPoints =
+      isMaxLevel ? 0 : max(0, nextFloor - data.experience).toInt();
+
+  final normalizedRatio = ratio.clamp(0.0, 1.0).toDouble();
+
+  return _LevelProgressData(
+    ratio: normalizedRatio,
+    isMaxLevel: isMaxLevel,
+    pointsToNext: remainingPoints,
+  );
+}
+
+int _requiredPointsForLevel(int level) {
+  if (level <= 1) {
+    return 0;
+  }
+  final n = level - 1;
+  return (n * (n + 1) ~/ 2) * 250;
 }
 
 String _formatKoreanDate(DateTime date) {
@@ -369,10 +397,93 @@ const _WeatherInfo _homeWeather = _WeatherInfo(
 const _CharacterStatusData _characterStatus = _CharacterStatusData(
   name: '텅구리',
   level: 15,
-  health: 85,
-  energy: 70,
-  defense: 60,
+  experience: 27780,
 );
+
+_CharacterStatusData _applyInactivityPenalty(
+  _CharacterStatusData data,
+  List<DateTime> completionHistory,
+) {
+  final penaltyLevels = _calculatePenaltyLevels(completionHistory);
+  if (penaltyLevels <= 0) {
+    return data;
+  }
+
+  final downgradedLevel = (data.level - penaltyLevels).clamp(1, _maxLevel);
+  final adjustedExperience = min(
+    data.experience,
+    _requiredPointsForLevel(downgradedLevel),
+  );
+
+  return data.copyWith(
+    level: downgradedLevel,
+    experience: adjustedExperience,
+  );
+}
+
+int _calculatePenaltyLevels(List<DateTime> completionHistory) {
+  if (completionHistory.isEmpty) {
+    return 1;
+  }
+
+  final latestCompletion = completionHistory.reduce(
+    (a, b) => a.isAfter(b) ? a : b,
+  );
+  final now = DateTime.now();
+  final difference = now.difference(latestCompletion);
+  if (difference.isNegative || difference <= _inactivityThreshold) {
+    return 0;
+  }
+
+  final weeks = difference.inDays ~/ _inactivityThreshold.inDays;
+  return max(1, weeks);
+}
+
+_CharacterStatusData _applyMissionExperience(
+  _CharacterStatusData data,
+  int missionPoints,
+) {
+  if (missionPoints <= 0) {
+    return data;
+  }
+
+  final totalExperience = data.experience + missionPoints;
+  final cappedExperience = min(
+    totalExperience,
+    _requiredPointsForLevel(_maxLevel),
+  );
+  final derivedLevel = _levelForExperience(cappedExperience);
+
+  return data.copyWith(
+    level: derivedLevel,
+    experience: cappedExperience,
+  );
+}
+
+int _levelForExperience(int experience) {
+  for (var level = 1; level < _maxLevel; level++) {
+    final nextFloor = _requiredPointsForLevel(level + 1);
+    if (experience < nextFloor) {
+      return level;
+    }
+  }
+  return _maxLevel;
+}
+
+String _getRandomMotivationMessage() {
+  final random = Random();
+  return _motivationMessages[random.nextInt(_motivationMessages.length)];
+}
+
+const List<String> _motivationMessages = [
+  '오늘도 공공체육과 함께 활기차게',
+  '오늘도 핏메이트와 함께 건강한 하루를 시작해볼까요',
+  '오늘도 핏메이트와 함께 활기차게!',
+  '가까운 공공체육시설에서 오늘도 한 걸음 더!',
+  '오늘도 한 번 더! 공공체육시설에서 몸과 마음을 깨워요',
+  '운동하기 좋은 날! 핏메이트와 함께 움직여봐요',
+  '가까운 체육시설에서 가볍게 몸을 풀어볼까요?',
+];
 
 
 
