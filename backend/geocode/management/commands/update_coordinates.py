@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from corporations.models import Corporation
 from bike_racks.models import BikeRack
 from places.models import Place
+from main.models import OutdoorEquipment, SportsFacility
 
 
 class Command(BaseCommand):
@@ -12,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--model',
             type=str,
-            help='특정 모델만 처리 (corporations, bike_racks, places)',
+            help='특정 모델만 처리 (corporations, bike_racks, places, outdoor, sports)',
         )
         parser.add_argument(
             '--delay',
@@ -39,6 +40,12 @@ class Command(BaseCommand):
 
         if not model_name or model_name == 'places':
             self.update_places(delay, limit)
+
+        if not model_name or model_name in ('outdoor', 'outdoorequipment', 'outdoor_equipment'):
+            self.update_outdoor_equipment(delay, limit)
+
+        if not model_name or model_name in ('sports', 'sportsfacility', 'sports_facility'):
+            self.update_sports_facility(delay, limit)
 
         self.stdout.write(self.style.SUCCESS('✅ 좌표 업데이트 완료!'))
 
@@ -156,3 +163,75 @@ class Command(BaseCommand):
             time.sleep(delay)
 
         self.stdout.write(self.style.SUCCESS(f'Place: 성공 {success_count}, 실패 {fail_count}'))
+
+    def update_outdoor_equipment(self, delay, limit=None):
+        self.stdout.write('📍 OutdoorEquipment 데이터 업데이트 시작...')
+
+        equipments = OutdoorEquipment.objects.filter(
+            latitude__isnull=True,
+            longitude__isnull=True,
+            address__isnull=False
+        ).exclude(address='')
+
+        if limit:
+            equipments = equipments[:limit]
+
+        total = equipments.count()
+        self.stdout.write(f'총 {total}개의 OutdoorEquipment을 처리합니다.')
+
+        success_count = 0
+        fail_count = 0
+
+        for idx, equipment in enumerate(equipments, 1):
+            try:
+                equipment.save()  # save()가 주소 기반 geocode 실행
+
+                if equipment.latitude and equipment.longitude:
+                    success_count += 1
+                    self.stdout.write(f'[{idx}/{total}] ✅ {equipment.name} - ({equipment.latitude}, {equipment.longitude})')
+                else:
+                    fail_count += 1
+                    self.stdout.write(self.style.WARNING(f'[{idx}/{total}] ⚠️  {equipment.name} - 좌표 변환 실패'))
+            except Exception as e:
+                fail_count += 1
+                self.stdout.write(self.style.ERROR(f'[{idx}/{total}] ❌ {equipment.name} - 오류: {str(e)}'))
+
+            time.sleep(delay)
+
+        self.stdout.write(self.style.SUCCESS(f'OutdoorEquipment: 성공 {success_count}, 실패 {fail_count}'))
+
+    def update_sports_facility(self, delay, limit=None):
+        self.stdout.write('📍 SportsFacility 데이터 업데이트 시작...')
+
+        facilities = SportsFacility.objects.filter(
+            latitude__isnull=True,
+            longitude__isnull=True,
+            address__isnull=False
+        ).exclude(address='')
+
+        if limit:
+            facilities = facilities[:limit]
+
+        total = facilities.count()
+        self.stdout.write(f'총 {total}개의 SportsFacility를 처리합니다.')
+
+        success_count = 0
+        fail_count = 0
+
+        for idx, facility in enumerate(facilities, 1):
+            try:
+                facility.save()  # save()가 주소 기반 geocode 실행
+
+                if facility.latitude and facility.longitude:
+                    success_count += 1
+                    self.stdout.write(f'[{idx}/{total}] ✅ {facility.place} - ({facility.latitude}, {facility.longitude})')
+                else:
+                    fail_count += 1
+                    self.stdout.write(self.style.WARNING(f'[{idx}/{total}] ⚠️  {facility.place} - 좌표 변환 실패'))
+            except Exception as e:
+                fail_count += 1
+                self.stdout.write(self.style.ERROR(f'[{idx}/{total}] ❌ {facility.place} - 오류: {str(e)}'))
+
+            time.sleep(delay)
+
+        self.stdout.write(self.style.SUCCESS(f'SportsFacility: 성공 {success_count}, 실패 {fail_count}'))

@@ -114,7 +114,8 @@ cd Gong_data
 
 2. 의존성 설치
 ```bash
-flutter pub get
+# 루트에서 바로 실행 가능하도록 만든 래퍼 스크립트 사용
+./flutter pub get
 ```
 
 3. 환경 변수 설정
@@ -145,13 +146,13 @@ GOOGLE_MAPS_API_KEY=your_actual_api_key_here
 5. 앱 실행
 ```bash
 # 개발 모드 실행
-flutter run
+./flutter run
 
 # 특정 디바이스 지정
-flutter run -d <device-id>
+./flutter run -d <device-id>
 
 # 디바이스 목록 확인
-flutter devices
+./flutter devices
 ```
 
 ## Google Maps API 키 발급

@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from corporations.models import Corporation
 from bike_racks.models import BikeRack
 from places.models import Place
+from main.models import OutdoorEquipment, SportsFacility
 from geocode.utils import geocode_address
 
 
@@ -13,7 +14,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--model',
             type=str,
-            help='특정 모델만 처리 (corporations, bike_racks, places)',
+            help='특정 모델만 처리 (corporations, bike_racks, places, outdoor, sports)',
         )
         parser.add_argument(
             '--delay',
@@ -34,6 +35,12 @@ class Command(BaseCommand):
 
         if not model_name or model_name == 'places':
             self.geocode_places(delay)
+
+        if not model_name or model_name in ('outdoor', 'outdoorequipment', 'outdoor_equipment'):
+            self.geocode_outdoor_equipment(delay)
+
+        if not model_name or model_name in ('sports', 'sportsfacility', 'sports_facility'):
+            self.geocode_sports_facility(delay)
 
         self.stdout.write(self.style.SUCCESS('Geocoding 완료!'))
 
@@ -150,3 +157,79 @@ class Command(BaseCommand):
             time.sleep(delay)
 
         self.stdout.write(self.style.SUCCESS(f'Place: 성공 {success_count}, 실패 {fail_count}'))
+
+    def geocode_outdoor_equipment(self, delay):
+        self.stdout.write('OutdoorEquipment 모델 geocoding 시작...')
+        equipments = OutdoorEquipment.objects.filter(
+            latitude__isnull=True,
+            longitude__isnull=True,
+            address__isnull=False
+        ).exclude(address='')
+
+        total = equipments.count()
+        self.stdout.write(f'총 {total}개의 OutdoorEquipment을 처리합니다.')
+
+        success_count = 0
+        fail_count = 0
+
+        for idx, equipment in enumerate(equipments, 1):
+            address = equipment.address
+            if not address:
+                continue
+
+            try:
+                lat, lon = geocode_address(address)
+                if lat and lon:
+                    equipment.latitude = lat
+                    equipment.longitude = lon
+                    equipment.save()
+                    success_count += 1
+                    self.stdout.write(f'[{idx}/{total}] 성공: {equipment.name} - {address}')
+                else:
+                    fail_count += 1
+                    self.stdout.write(self.style.WARNING(f'[{idx}/{total}] 실패: {equipment.name} - {address}'))
+            except Exception as e:
+                fail_count += 1
+                self.stdout.write(self.style.ERROR(f'[{idx}/{total}] 오류: {equipment.name} - {str(e)}'))
+
+            time.sleep(delay)
+
+        self.stdout.write(self.style.SUCCESS(f'OutdoorEquipment: 성공 {success_count}, 실패 {fail_count}'))
+
+    def geocode_sports_facility(self, delay):
+        self.stdout.write('SportsFacility 모델 geocoding 시작...')
+        facilities = SportsFacility.objects.filter(
+            latitude__isnull=True,
+            longitude__isnull=True,
+            address__isnull=False
+        ).exclude(address='')
+
+        total = facilities.count()
+        self.stdout.write(f'총 {total}개의 SportsFacility를 처리합니다.')
+
+        success_count = 0
+        fail_count = 0
+
+        for idx, facility in enumerate(facilities, 1):
+            address = facility.address
+            if not address:
+                continue
+
+            try:
+                lat, lon = geocode_address(address)
+                if lat and lon:
+                    facility.latitude = lat
+                    facility.longitude = lon
+                    facility.save()
+                    success_count += 1
+                    self.stdout.write(f'[{idx}/{total}] 성공: {facility.place} - {address}')
+                else:
+                    fail_count += 1
+                    self.stdout.write(self.style.WARNING(f'[{idx}/{total}] 실패: {facility.place} - {address}'))
+            except Exception as e:
+                fail_count += 1
+                self.stdout.write(self.style.ERROR(f'[{idx}/{total}] 오류: {facility.place} - {str(e)}'))
+
+            time.sleep(delay)
+
+        self.stdout.write(self.style.SUCCESS(f'SportsFacility: 성공 {success_count}, 실패 {fail_count}'))

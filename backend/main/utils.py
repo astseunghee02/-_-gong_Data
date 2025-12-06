@@ -1,7 +1,12 @@
 import math
 import requests
+from math import radians, sin, cos, asin, sqrt
+
 
 def calculate_distance(lat1, lon1, lat2, lon2):
+    """
+    기존 거리 계산 (km). 하버사인과 동일한 계산이지만 남겨둔다.
+    """
     R = 6371  # km
 
     d_lat = math.radians(lat2 - lat1)
@@ -14,6 +19,21 @@ def calculate_distance(lat1, lon1, lat2, lon2):
         math.sin(d_lon / 2) ** 2
     )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    두 좌표(위도/경도) 사이의 거리(km)를 반환.
+    """
+    R = 6371  # km
+
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
     return R * c
 
 def fetch_equipment_data():

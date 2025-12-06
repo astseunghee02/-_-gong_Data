@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper to run Flutter CLI from the repository root by dispatching to frontend,
+# while avoiding recursion into this wrapper.
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF_PATH="${ROOT_DIR}/$(basename "${BASH_SOURCE[0]}")"
+FRONTEND_DIR="${ROOT_DIR}/frontend"
+
+if [ ! -d "${FRONTEND_DIR}" ]; then
+  echo "frontend directory not found. Run this script from the Gong_data root." >&2
+  exit 1
+fi
+
+# Find the real flutter binary (skip this wrapper if it's first on PATH).
+REAL_FLUTTER=""
+while IFS= read -r candidate; do
+  if [ "${candidate}" != "${SELF_PATH}" ]; then
+    REAL_FLUTTER="${candidate}"
+    break
+  fi
+done < <(which -a flutter 2>/dev/null || true)
+
+if [ -z "${REAL_FLUTTER}" ]; then
+  echo "Flutter is not installed or not on PATH." >&2
+  exit 1
+fi
+
+cd "${FRONTEND_DIR}"
+exec "${REAL_FLUTTER}" "$@"

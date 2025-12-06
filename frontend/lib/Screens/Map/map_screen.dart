@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
 
 import '../../constants/app_colors.dart';
 import '../../data/user_progress_controller.dart';
@@ -23,6 +27,10 @@ class _MapScreenState extends State<MapScreen> {
   String? _mapStyle;
   GoogleMapController? _mapController;
   final LocationService _locationService = LocationService();
+  final Set<Marker> _markers = {};
+  List<_NearbyPlace> _nearbyPlaces = [];
+  bool _isLoadingNearby = false;
+  String? _nearbyError;
 
   // 초기 카메라 위치 (서울 기본값)
   CameraPosition _initialCameraPosition = const CameraPosition(
@@ -72,6 +80,8 @@ class _MapScreenState extends State<MapScreen> {
       print('⏰ 시간: ${DateTime.now()}');
       print('─' * 50);
 
+      await _fetchNearbyPlaces(position);
+
       // 지도 카메라를 현재 위치로 이동
       if (_mapController != null) {
         _mapController!.animateCamera(
@@ -85,6 +95,73 @@ class _MapScreenState extends State<MapScreen> {
       print('❌ 위치 정보를 가져올 수 없습니다.');
       print('⚠️  위치 권한을 확인하거나 GPS를 활성화해주세요.');
     }
+  }
+
+  Future<void> _fetchNearbyPlaces(Position position) async {
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null || baseUrl.isEmpty) {
+      setState(() {
+        _nearbyError = 'API_BASE_URL이 설정되지 않았습니다.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingNearby = true;
+      _nearbyError = null;
+    });
+
+    try {
+      final uri = Uri.parse(
+        '$baseUrl/api/nearby?lat=${position.latitude}&lon=${position.longitude}&limit=5',
+      );
+      final res = await http.get(uri);
+      if (res.statusCode != 200) {
+        setState(() {
+          _nearbyError = '주변 장소 조회 실패 (${res.statusCode})';
+          _isLoadingNearby = false;
+        });
+        return;
+      }
+
+      final List<dynamic> data = json.decode(res.body) as List<dynamic>;
+      final places = data
+          .map((e) => _NearbyPlace.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      final markers = places
+          .map(
+            (p) => Marker(
+              markerId: MarkerId('nearby_${p.id ?? p.name}_${p.lat}_${p.lon}'),
+              position: LatLng(p.lat, p.lon),
+              infoWindow: InfoWindow(
+                title: p.name,
+                snippet: '${p.distance} km',
+              ),
+            ),
+          )
+          .toSet();
+
+      setState(() {
+        _nearbyPlaces = places;
+        _markers
+          ..clear()
+          ..addAll(markers);
+        _isLoadingNearby = false;
+      });
+    } catch (e) {
+      setState(() {
+        _nearbyError = '주변 장소 불러오기 중 오류가 발생했습니다.';
+        _isLoadingNearby = false;
+      });
+    }
+  }
+
+  void _focusOnPlace(_NearbyPlace place) {
+    final target = LatLng(place.lat, place.lon);
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(target, 16),
+    );
   }
 
   @override
@@ -167,6 +244,7 @@ class _MapScreenState extends State<MapScreen> {
                                 zoomControlsEnabled: false,
                                 compassEnabled: true,
                                 mapToolbarEnabled: false,
+                                markers: _markers,
                                 onMapCreated: (GoogleMapController controller) async {
                                   _mapController = controller;
                                   try {
@@ -217,15 +295,42 @@ class _MapScreenState extends State<MapScreen> {
                                 child: FloatingActionButton.small(
                                   onPressed: _loadCurrentLocation,
                                   backgroundColor: Colors.white,
-                                  child: const Icon(
-                                    Icons.my_location,
-                                    color: Color(0xFF3C86C0),
+                                    child: const Icon(
+                                      Icons.my_location,
+                                      color: Color(0xFF3C86C0),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              if (_nearbyError != null)
+                                Positioned(
+                                  left: 12,
+                                  bottom: 12,
+                                  right: 12,
+                                  child: _NearbyStatusBanner(
+                                    message: _nearbyError!,
+                                    isError: true,
+                                  ),
+                                ),
+                              if (_isLoadingNearby && !_isLoadingLocation)
+                                Positioned(
+                                  left: 12,
+                                  bottom: 12,
+                                  right: 12,
+                                  child: const _NearbyStatusBanner(
+                                    message: '주변 장소를 불러오는 중...',
+                                  ),
+                                ),
                             ],
                           ),
                         ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _NearbyList(
+                  places: _nearbyPlaces,
+                  onTap: (place) => _focusOnPlace(place),
                 ),
               ),
               const SizedBox(height: 24),
@@ -242,6 +347,189 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NearbyList extends StatelessWidget {
+  final List<_NearbyPlace> places;
+  final ValueChanged<_NearbyPlace> onTap;
+
+  const _NearbyList({
+    required this.places,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '주변 추천 5곳',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (places.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x14000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Text(
+              '근처 정보를 불러오면 여기에서 보여줄게요.',
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+              ),
+            ),
+          )
+        else
+          Column(
+            children: places
+                .map(
+                  (p) => _NearbyTile(
+                    place: p,
+                    onTap: () => onTap(p),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class _NearbyTile extends StatelessWidget {
+  final _NearbyPlace place;
+  final VoidCallback onTap;
+
+  const _NearbyTile({
+    required this.place,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3C86C0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.place,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    place.address,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${place.distance} km',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NearbyStatusBanner extends StatelessWidget {
+  final String message;
+  final bool isError;
+
+  const _NearbyStatusBanner({
+    required this.message,
+    this.isError = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      decoration: BoxDecoration(
+        color: isError ? Colors.red.shade400 : Colors.black87,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline : Icons.location_on,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -480,6 +768,35 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
           ),
         ),
     ];
+  }
+}
+
+class _NearbyPlace {
+  final int? id;
+  final String name;
+  final String address;
+  final double lat;
+  final double lon;
+  final double distance;
+
+  _NearbyPlace({
+    this.id,
+    required this.name,
+    required this.address,
+    required this.lat,
+    required this.lon,
+    required this.distance,
+  });
+
+  factory _NearbyPlace.fromJson(Map<String, dynamic> json) {
+    return _NearbyPlace(
+      id: json['id'] as int?,
+      name: json['name'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      lat: (json['lat'] as num).toDouble(),
+      lon: (json['lon'] as num).toDouble(),
+      distance: (json['distance'] as num).toDouble(),
+    );
   }
 }
 
