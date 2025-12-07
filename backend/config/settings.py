@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'corporations',
     'bike_racks',
     'accounts',
-    'geocode'
+    'geocode',
+    'missions',
 ]
 
 REST_FRAMEWORK = {

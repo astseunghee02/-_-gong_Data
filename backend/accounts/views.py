@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, UserSerializer, UserProfileSerializer
+from .models import UserProfile
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -30,10 +31,21 @@ class UserInfoView(APIView):
 
     def get(self, request):
         user = request.user
-        return Response({
-            "username": user.username,
-            "email": user.email,
-        })
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+
+class UpdateProfileView(APIView):
+    """프로필 정보 업데이트"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
 
 class LogoutView(APIView):

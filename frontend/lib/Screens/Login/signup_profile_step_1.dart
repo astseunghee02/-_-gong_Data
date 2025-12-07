@@ -46,7 +46,14 @@ class _SignupProfileStepOneState extends State<SignupProfileStepOne> {
     FocusScope.of(context).unfocus();
 
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SignupProfileStep()),
+      MaterialPageRoute(
+        builder: (_) => SignupProfileStep(
+          username: _idController.text,
+          password: _passwordController.text,
+          name: _nameController.text,
+          phone: _phoneController.text,
+        ),
+      ),
     );
   }
 

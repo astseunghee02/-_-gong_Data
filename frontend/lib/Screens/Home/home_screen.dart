@@ -3,11 +3,112 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../data/user_progress_controller.dart';
+import '../../services/auth_service.dart';
+import '../../services/location_service.dart';
+import '../../services/weather_service.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  final int? userLevel;
+  final String? userName;
+
+  const HomeScreen({
+    super.key,
+    this.userLevel,
+    this.userName,
+  });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _displayName = 'User';
+  int _level = 1;
+  final LocationService _locationService = LocationService();
+  final WeatherService _weatherService = WeatherService.instance;
+  _WeatherInfo? _weatherInfo;
+  bool _isLoadingWeather = false;
+  String? _weatherError;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayName = widget.userName ?? _displayName;
+    _level = widget.userLevel ?? _level;
+    _loadProfile();
+    _loadWeather();
+  }
+
+  Future<void> _loadProfile() async {
+    final cachedName = await AuthService.getCachedProfileName();
+    final cachedLevel = await AuthService.getCachedProfileLevel();
+
+    if (!mounted) return;
+    setState(() {
+      if (cachedName != null && cachedName.isNotEmpty) {
+        _displayName = cachedName;
+      }
+      if (cachedLevel != null) {
+        _level = cachedLevel;
+      }
+    });
+
+    final profile = await AuthService.getUserProfile();
+    if (!mounted || profile == null) return;
+
+    final profileData = profile['profile'] as Map<String, dynamic>? ?? {};
+    final fetchedName = (profileData['name'] as String?)?.trim();
+    final fetchedLevel = profileData['level'] as int?;
+
+    setState(() {
+      if (fetchedName != null && fetchedName.isNotEmpty) {
+        _displayName = fetchedName;
+      } else if (profile['username'] is String) {
+        _displayName = profile['username'] as String;
+      }
+      if (fetchedLevel != null) {
+        _level = fetchedLevel;
+      }
+    });
+  }
+
+  Future<void> _loadWeather() async {
+    setState(() {
+      _isLoadingWeather = true;
+      _weatherError = null;
+    });
+
+    final position = await _locationService.getCurrentLocation();
+    if (position == null) {
+      setState(() {
+        _isLoadingWeather = false;
+        _weatherError = '현재 위치를 가져올 수 없습니다.';
+      });
+      return;
+    }
+
+    final weather = await _weatherService.fetchWeather(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _isLoadingWeather = false;
+      if (weather == null) {
+        _weatherError = '날씨 정보를 불러오지 못했습니다.';
+        return;
+      }
+
+      _weatherInfo = _WeatherInfo(
+        condition: _mapCondition(weather.conditionMain),
+        temperature: weather.temperature.round(),
+        description: weather.description,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,12 +118,11 @@ class HomeScreen extends StatelessWidget {
     return ValueListenableBuilder<UserProgressState>(
       valueListenable: UserProgressController.instance.notifier,
       builder: (context, progressState, _) {
-        final characterData = _applyMissionExperience(
-          _applyInactivityPenalty(
-            _characterStatus,
-            progressState.completionHistory,
-          ),
-          progressState.missionPoints,
+        // DB에서 가져온 레벨을 사용
+        final characterData = _CharacterStatusData(
+          name: _displayName,
+          level: _level,
+          experience: progressState.missionPoints % 100,
         );
 
         return Scaffold(
@@ -44,8 +144,11 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _WeatherBanner(
                     dateString: dateLabel,
-                    weather: _homeWeather,
+                    weather: _weatherInfo ?? _homeWeather,
                     message: motivationMessage,
+                    isLoading: _isLoadingWeather,
+                    errorText: _weatherError,
+                    onRefresh: _loadWeather,
                   ),
                   const SizedBox(height: 16),
                   _CharacterCard(data: characterData),
@@ -64,11 +167,17 @@ class _WeatherBanner extends StatelessWidget {
   final String dateString;
   final _WeatherInfo weather;
   final String message;
+  final bool isLoading;
+  final String? errorText;
+  final VoidCallback onRefresh;
 
   const _WeatherBanner({
     required this.dateString,
     required this.weather,
     required this.message,
+    required this.isLoading,
+    required this.errorText,
+    required this.onRefresh,
   });
 
   @override
@@ -108,13 +217,51 @@ class _WeatherBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                if (isLoading)
+                  const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '날씨를 불러오는 중...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (errorText != null)
+                  Text(
+                    errorText!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                else ...[
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  if (weather.description != null && weather.description!.isNotEmpty)
+                    Text(
+                      weather.description!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -133,6 +280,11 @@ class _WeatherBanner extends StatelessWidget {
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
+              ),
+              IconButton(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh, size: 18),
+                color: Colors.black54,
               ),
             ],
           ),
@@ -196,10 +348,18 @@ class _CharacterCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Image.asset(
-                    'assets/images/pori-user.png',
+                    _getCharacterImage(data.level),
                     height: _characterHighlightSize,
                     width: _characterHighlightSize,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/images/pori-user.png',
+                        height: _characterHighlightSize,
+                        width: _characterHighlightSize,
+                        fit: BoxFit.cover,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -280,10 +440,12 @@ class _LevelGauge extends StatelessWidget {
 class _WeatherInfo {
   final _WeatherCondition condition;
   final int temperature;
+  final String? description;
 
   const _WeatherInfo({
     required this.condition,
     required this.temperature,
+    this.description,
   });
 }
 
@@ -367,6 +529,20 @@ String _formatKoreanDate(DateTime date) {
   return '${date.year}년 ${date.month}월 ${date.day}일 ($weekdayLabel)';
 }
 
+_WeatherCondition _mapCondition(String conditionMain) {
+  final lower = conditionMain.toLowerCase();
+  if (lower.contains('rain') ||
+      lower.contains('drizzle') ||
+      lower.contains('thunder') ||
+      lower.contains('snow')) {
+    return _WeatherCondition.rainy;
+  }
+  if (lower.contains('cloud') || lower.contains('mist') || lower.contains('fog')) {
+    return _WeatherCondition.cloudy;
+  }
+  return _WeatherCondition.sunny;
+}
+
 IconData _iconForWeather(_WeatherCondition condition) {
   switch (condition) {
     case _WeatherCondition.sunny:
@@ -392,6 +568,7 @@ Color _colorForWeather(_WeatherCondition condition) {
 const _WeatherInfo _homeWeather = _WeatherInfo(
   condition: _WeatherCondition.sunny,
   temperature: 22,
+  description: '맑음',
 );
 
 const _CharacterStatusData _characterStatus = _CharacterStatusData(
@@ -485,10 +662,14 @@ const List<String> _motivationMessages = [
   '가까운 체육시설에서 가볍게 몸을 풀어볼까요?',
 ];
 
-
-
-
-
+String _getCharacterImage(int level) {
+  if (level < 10) return 'assets/pori/pori_01.png';
+  if (level < 20) return 'assets/pori/pori_10.png';
+  if (level < 30) return 'assets/pori/pori_20.png';
+  if (level < 40) return 'assets/pori/pori_30.png';
+  if (level < 50) return 'assets/pori/pori_40.png';
+  return 'assets/pori/pori_50.png';
+}
 
 
 

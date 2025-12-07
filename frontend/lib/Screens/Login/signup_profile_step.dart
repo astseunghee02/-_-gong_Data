@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import 'signup_profile_shell.dart';
 
 enum Gender { male, female, other }
 
 class SignupProfileStep extends StatefulWidget {
-  const SignupProfileStep({super.key});
+  final String username;
+  final String password;
+  final String name;
+  final String phone;
+
+  const SignupProfileStep({
+    super.key,
+    required this.username,
+    required this.password,
+    required this.name,
+    required this.phone,
+  });
 
   @override
   State<SignupProfileStep> createState() => _SignupProfileStepState();
@@ -29,16 +43,145 @@ class _SignupProfileStepState extends State<SignupProfileStep> {
     super.dispose();
   }
 
-  void _handleNext() {
+  Future<void> _handleNext() async {
     final age = int.tryParse(_ageController.text) ?? 0;
     final weight = double.tryParse(_weightController.text) ?? 0;
     final height = double.tryParse(_heightController.text) ?? 0;
 
-    debugPrint('선택한 성별: $_selectedGender');
-    debugPrint('나이: $age');
-    debugPrint('몸무게: $weight');
-    debugPrint('키: $height');
-    // TODO: 다음 단계로 이동하거나 서버 연동 로직을 연결해주세요.
+    if (age <= 0 || weight <= 0 || height <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('모든 정보를 올바르게 입력해주세요.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null || baseUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('서버 주소가 설정되지 않았습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 로딩 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/register/'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'username': widget.username,
+          'email': '${widget.username}@fitmate.com',
+          'password': widget.password,
+        }),
+      );
+
+      // 로딩 다이얼로그 닫기
+      Navigator.of(context).pop();
+
+      if (response.statusCode == 200) {
+        final registerData = json.decode(response.body);
+        final accessToken = registerData['tokens']['access'];
+
+        debugPrint('회원가입 성공!');
+
+        // 프로필 정보 업데이트
+        final profileResponse = await http.post(
+          Uri.parse('$baseUrl/api/auth/profile/update/'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+          body: json.encode({
+            'name': widget.name,
+            'phone': widget.phone,
+            'age': age,
+            'gender': _selectedGender.toString().split('.').last,
+            'weight': weight,
+            'height': height,
+          }),
+        );
+
+        debugPrint('프로필 업데이트 상태: ${profileResponse.statusCode}');
+        debugPrint('이름: ${widget.name}');
+        debugPrint('전화번호: ${widget.phone}');
+        debugPrint('성별: $_selectedGender');
+        debugPrint('나이: $age');
+        debugPrint('몸무게: $weight');
+        debugPrint('키: $height');
+
+        // 회원가입 완료 안내
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              '회원가입 완료',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: signupAccentColor,
+              ),
+            ),
+            content: const Text(
+              '회원가입이 완료되었습니다!\n로그인 화면으로 이동합니다.',
+              style: TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // 다이얼로그 닫기
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/login',
+                    (route) => false,
+                  );
+                },
+                child: const Text(
+                  '확인',
+                  style: TextStyle(
+                    color: signupAccentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        final error = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('회원가입 실패: ${error.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // 로딩 다이얼로그 닫기
+      Navigator.of(context).pop();
+
+      debugPrint('회원가입 오류: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('서버 연결 실패: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

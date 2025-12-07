@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../../constants/app_colors.dart';
+import '../../services/auth_service.dart';
 import '../Home/home_screen.dart';
 import 'signup_profile_step_1.dart';
 import 'signup_profile_step.dart';
@@ -34,14 +38,111 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
       return;
     }
 
     FocusScope.of(context).unfocus();
-    _goToHome();
+
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null || baseUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('서버 주소가 설정되지 않았습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 로딩 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/login/'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'username': _emailController.text,
+          'password': _passwordController.text,
+        }),
+      );
+
+      // 로딩 다이얼로그 닫기
+      Navigator.of(context).pop();
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final accessToken = data['access'];
+        print('로그인 성공: $accessToken');
+
+        // 토큰 저장
+        await AuthService.saveToken(accessToken);
+
+        // 사용자 정보 가져오기
+        final userResponse = await http.get(
+          Uri.parse('$baseUrl/api/auth/me/'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+
+        if (userResponse.statusCode == 200) {
+          final userData = json.decode(userResponse.body);
+          print('사용자 정보: $userData');
+
+          // 사용자 정보 저장
+          await AuthService.saveUserInfo(
+            userData['id'],
+            userData['username'],
+          );
+          await AuthService.cacheProfile(userData);
+
+          // 로그인 성공 - 토큰과 사용자 정보를 함께 전달
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => HomeScreen(
+                userLevel: userData['profile']?['level'] ?? 1,
+                userName: userData['profile']?['name']?.isNotEmpty == true
+                    ? userData['profile']['name']
+                    : userData['username'],
+              ),
+            ),
+            (route) => false,
+          );
+        } else {
+          _goToHome();
+        }
+      } else {
+        // 로그인 실패
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('로그인 실패: 아이디 또는 비밀번호를 확인해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // 로딩 다이얼로그 닫기
+      Navigator.of(context).pop();
+
+      print('로그인 오류: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('서버 연결 실패: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -65,11 +166,11 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             _AuthTextField(
               controller: _emailController,
-              label: '이메일 주소',
-              hintText: '예: 사용자@fitmate.com',
-              keyboardType: TextInputType.emailAddress,
+              label: '아이디',
+              hintText: '아이디를 입력하세요',
+              keyboardType: TextInputType.text,
               textInputAction: TextInputAction.next,
-              validator: _validateEmail,
+              validator: (value) => _validateRequired(value, '아이디'),
             ),
             const SizedBox(height: 16),
             _AuthTextField(

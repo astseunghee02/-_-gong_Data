@@ -9,6 +9,8 @@ import '../Map/map_screen.dart';
 import '../../recommend_backend/fit_recommend.dart';
 import '../../recommend_backend/recommendation_models.dart';
 import '../../widgets/recommendation_section_from_api.dart';
+import '../../services/place_service.dart';
+import '../../services/location_service.dart';
 
 class MissionScreen extends StatefulWidget {
   const MissionScreen({super.key});
@@ -20,6 +22,12 @@ class MissionScreen extends StatefulWidget {
 class _MissionScreenState extends State<MissionScreen> {
   final RecommendService _service = RecommendService();
   late Future<RecommendationResponse> _futureRecommend;
+  final LocationService _locationService = LocationService();
+  final PlaceService _placeService = PlaceService.instance;
+
+  List<FacilityInfo> _facilities = defaultFacilities;
+  bool _isLoadingFacilities = true;
+  String? _facilityError;
 
   @override
   void initState() {
@@ -33,6 +41,48 @@ class _MissionScreenState extends State<MissionScreen> {
       heightCm: 162,
       weightKg: 80,
     );
+    _loadNearbyFacilities();
+  }
+
+  Future<void> _loadNearbyFacilities() async {
+    setState(() {
+      _isLoadingFacilities = true;
+      _facilityError = null;
+    });
+
+    final position = await _locationService.getCurrentLocation();
+    if (position == null) {
+      setState(() {
+        _facilityError = '현재 위치를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
+        _isLoadingFacilities = false;
+      });
+      return;
+    }
+
+    final places = await _placeService.fetchNearbyPlaces(position: position);
+    if (!mounted) return;
+
+    if (places.isEmpty) {
+      setState(() {
+        _facilityError = '주변 공공체육시설을 찾지 못했습니다.';
+        _isLoadingFacilities = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _facilities = places
+          .map(
+            (p) => FacilityInfo(
+              name: p.name,
+              distance: '${p.distance.toStringAsFixed(2)}km',
+              rating: 4.5, // TODO: 실제 평점 데이터가 있으면 적용
+              programs: 0,
+            ),
+          )
+          .toList();
+      _isLoadingFacilities = false;
+    });
   }
 
   @override
@@ -69,8 +119,11 @@ class _MissionScreenState extends State<MissionScreen> {
               // -------------------------------
               // 기존 시설 카드
               // -------------------------------
-              FacilitySection(
-                facilities: defaultFacilities,
+              _FacilitySectionWrapper(
+                facilities: _facilities,
+                isLoading: _isLoadingFacilities,
+                error: _facilityError,
+                onRefresh: _loadNearbyFacilities,
                 onViewMore: () {
                   Navigator.push(
                     context,
@@ -127,6 +180,84 @@ class _MissionScreenState extends State<MissionScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FacilitySectionWrapper extends StatelessWidget {
+  final List<FacilityInfo> facilities;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRefresh;
+  final VoidCallback onViewMore;
+
+  const _FacilitySectionWrapper({
+    required this.facilities,
+    required this.isLoading,
+    required this.error,
+    required this.onRefresh,
+    required this.onViewMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x11000000),
+              blurRadius: 10,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (error != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FacilitySection(
+            facilities: facilities,
+            onViewMore: onViewMore,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4E5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Color(0xFFB26A00)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    error!,
+                    style: const TextStyle(color: Color(0xFF8A5A00), fontSize: 12),
+                  ),
+                ),
+                IconButton(
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh, size: 18, color: Color(0xFFB26A00)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return FacilitySection(
+      facilities: facilities,
+      onViewMore: onViewMore,
     );
   }
 }

@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 
 import '../../constants/app_colors.dart';
 import '../../data/user_progress_controller.dart';
+import '../../services/auth_service.dart';
+import '../../services/mission_service.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../../services/location_service.dart';
@@ -31,6 +33,17 @@ class _MapScreenState extends State<MapScreen> {
   List<_NearbyPlace> _nearbyPlaces = [];
   bool _isLoadingNearby = false;
   String? _nearbyError;
+
+  // 미션 통계
+  int _ongoingMissionCount = 0;
+  int _weeklyCompleted = 0;
+  int _totalCompleted = 0;
+  bool _isLoadingMissions = false;
+  String? _missionError;
+
+  final MissionService _missionService = MissionService.instance;
+  List<MissionModel> _availableMissions = [];
+  List<MissionModel> _ongoingMissions = [];
 
   // 초기 카메라 위치 (서울 기본값)
   CameraPosition _initialCameraPosition = const CameraPosition(
@@ -81,6 +94,7 @@ class _MapScreenState extends State<MapScreen> {
       print('─' * 50);
 
       await _fetchNearbyPlaces(position);
+      await _refreshMissionsAndStats(position);
 
       // 지도 카메라를 현재 위치로 이동
       if (_mapController != null) {
@@ -94,12 +108,62 @@ class _MapScreenState extends State<MapScreen> {
       });
       print('❌ 위치 정보를 가져올 수 없습니다.');
       print('⚠️  위치 권한을 확인하거나 GPS를 활성화해주세요.');
+      await _refreshMissionsAndStats(null);
+    }
+  }
+
+  Future<void> _refreshMissionsAndStats(Position? position) async {
+    setState(() {
+      _isLoadingMissions = true;
+      _missionError = null;
+    });
+
+    final token = await AuthService.getToken();
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (token == null || baseUrl == null || baseUrl.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _missionError = '로그인이 필요합니다. 다시 로그인해주세요.';
+        _isLoadingMissions = false;
+      });
+      return;
+    }
+
+    try {
+      if (position != null) {
+        await _missionService.generateMissions(
+          lat: position.latitude,
+          lon: position.longitude,
+        );
+      }
+
+      final available = await _missionService.fetchAvailableMissions();
+      final ongoing = await _missionService.fetchOngoingMissions();
+      await _loadMissionStats();
+
+      if (!mounted) return;
+      setState(() {
+        _availableMissions = available;
+        _ongoingMissions = ongoing;
+      });
+    } catch (e) {
+      print('❌ 미션 데이터 로드 오류: $e');
+      if (!mounted) return;
+      setState(() {
+        _missionError = '미션 정보를 불러오지 못했습니다. 다시 시도해주세요.';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMissions = false;
+      });
     }
   }
 
   Future<void> _fetchNearbyPlaces(Position position) async {
     final baseUrl = dotenv.env['API_BASE_URL'];
     if (baseUrl == null || baseUrl.isEmpty) {
+      print('❌ API_BASE_URL이 설정되지 않았습니다.');
       setState(() {
         _nearbyError = 'API_BASE_URL이 설정되지 않았습니다.';
       });
@@ -115,7 +179,18 @@ class _MapScreenState extends State<MapScreen> {
       final uri = Uri.parse(
         '$baseUrl/api/nearby?lat=${position.latitude}&lon=${position.longitude}&limit=5',
       );
-      final res = await http.get(uri);
+      print('📍 주변 장소 API 호출: $uri');
+
+      final res = await http.get(uri).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('서버 응답 시간 초과');
+        },
+      );
+
+      print('📡 응답 상태 코드: ${res.statusCode}');
+      print('📡 응답 본문: ${res.body}');
+
       if (res.statusCode != 200) {
         setState(() {
           _nearbyError = '주변 장소 조회 실패 (${res.statusCode})';
@@ -125,6 +200,8 @@ class _MapScreenState extends State<MapScreen> {
       }
 
       final List<dynamic> data = json.decode(res.body) as List<dynamic>;
+      print('✅ 주변 장소 ${data.length}개 로드됨');
+
       final places = data
           .map((e) => _NearbyPlace.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -150,11 +227,23 @@ class _MapScreenState extends State<MapScreen> {
         _isLoadingNearby = false;
       });
     } catch (e) {
+      print('❌ 주변 장소 불러오기 오류: $e');
       setState(() {
-        _nearbyError = '주변 장소 불러오기 중 오류가 발생했습니다.';
+        _nearbyError = '서버 연결 실패: ${e.toString()}';
         _isLoadingNearby = false;
       });
     }
+  }
+
+  Future<void> _loadMissionStats() async {
+    final stats = await _missionService.fetchMissionStats();
+    if (!mounted || stats == null) return;
+
+    setState(() {
+      _ongoingMissionCount = stats.ongoing;
+      _weeklyCompleted = stats.weeklyCompleted;
+      _totalCompleted = stats.totalCompleted;
+    });
   }
 
   void _focusOnPlace(_NearbyPlace place) {
@@ -162,6 +251,52 @@ class _MapScreenState extends State<MapScreen> {
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(target, 16),
     );
+  }
+
+  Future<void> _handleStartMission(MissionModel mission) async {
+    final started = await _missionService.startMission(
+      mission.missionId,
+      position: _currentPosition,
+    );
+
+    if (started == null) {
+      if (!mounted) return;
+      setState(() {
+        _missionError = '미션을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.';
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('미션을 시작했어요!')),
+    );
+    await _refreshMissionsAndStats(_currentPosition);
+  }
+
+  Future<void> _handleCompleteMission(MissionModel mission) async {
+    final result = await _missionService.completeMission(
+      mission.missionId,
+      position: _currentPosition,
+    );
+
+    if (result == null) {
+      if (!mounted) return;
+      setState(() {
+        _missionError = '미션을 완료하지 못했습니다. 장소에 더 가까이 가거나 다시 시도해주세요.';
+      });
+      return;
+    }
+
+    UserProgressController.instance.addMissionCompletion(
+      points: result.pointsEarned,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('미션 완료! +${result.pointsEarned}P 획득')),
+    );
+    await _refreshMissionsAndStats(_currentPosition);
   }
 
   @override
@@ -336,12 +471,24 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _MissionStatsPanel(data: _missionStats),
+                child: _MissionStatsPanel(
+                  ongoing: _ongoingMissionCount,
+                  weeklyCompleted: _weeklyCompleted,
+                  totalCompleted: _totalCompleted,
+                ),
               ),
               const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: _MissionFeaturePanel(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _MissionFeaturePanel(
+                  ongoingMissions: _ongoingMissions,
+                  availableMissions: _availableMissions,
+                  isLoading: _isLoadingMissions,
+                  errorMessage: _missionError,
+                  onStart: _handleStartMission,
+                  onComplete: _handleCompleteMission,
+                  onRefresh: () => _refreshMissionsAndStats(_currentPosition),
+                ),
               ),
               const SizedBox(height: 32),
             ],
@@ -536,9 +683,15 @@ class _NearbyStatusBanner extends StatelessWidget {
 }
 
 class _MissionStatsPanel extends StatelessWidget {
-  final _MissionStats data;
+  final int ongoing;
+  final int weeklyCompleted;
+  final int totalCompleted;
 
-  const _MissionStatsPanel({required this.data});
+  const _MissionStatsPanel({
+    required this.ongoing,
+    required this.weeklyCompleted,
+    required this.totalCompleted,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -561,20 +714,20 @@ class _MissionStatsPanel extends StatelessWidget {
         children: [
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.ongoing),
+              value: formatter.format(ongoing),
               label: '진행중',
             ),
           ),
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.weeklyCompleted),
+              value: formatter.format(weeklyCompleted),
               label: '이번주 완료',
               showDivider: true,
             ),
           ),
           Expanded(
             child: _MissionStatTile(
-              value: formatter.format(data.totalCompleted),
+              value: formatter.format(totalCompleted),
               label: '총 완료',
             ),
           ),
@@ -630,26 +783,25 @@ class _MissionStatTile extends StatelessWidget {
   }
 }
 
-class _MissionStats {
-  final int ongoing;
-  final int weeklyCompleted;
-  final int totalCompleted;
-
-  const _MissionStats({
-    required this.ongoing,
-    required this.weeklyCompleted,
-    required this.totalCompleted,
-  });
-}
-
-const _MissionStats _missionStats = _MissionStats(
-  ongoing: 5,
-  weeklyCompleted: 3,
-  totalCompleted: 48,
-);
-
 class _MissionFeaturePanel extends StatefulWidget {
-  const _MissionFeaturePanel({super.key});
+  final List<MissionModel> ongoingMissions;
+  final List<MissionModel> availableMissions;
+  final bool isLoading;
+  final String? errorMessage;
+  final Future<void> Function(MissionModel) onStart;
+  final Future<void> Function(MissionModel) onComplete;
+  final Future<void> Function() onRefresh;
+
+  const _MissionFeaturePanel({
+    super.key,
+    required this.ongoingMissions,
+    required this.availableMissions,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onStart,
+    required this.onComplete,
+    required this.onRefresh,
+  });
 
   @override
   State<_MissionFeaturePanel> createState() => _MissionFeaturePanelState();
@@ -657,17 +809,15 @@ class _MissionFeaturePanel extends StatefulWidget {
 
 class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
   _MissionTab _selectedTab = _MissionTab.today;
-  final List<_MissionProgressItem> _ongoingMissions =
-      List<_MissionProgressItem>.from(_defaultOngoingMissions);
-  final List<_MissionItem> _availableMissions =
-      List<_MissionItem>.from(_defaultAvailableMissions);
+  bool _isActionInProgress = false;
 
-  void _handleMissionComplete(_MissionProgressItem mission) {
-    UserProgressController.instance
-        .addMissionCompletion(points: mission.pointValue);
-    setState(() {
-      _ongoingMissions.remove(mission);
-    });
+  Future<void> _runAction(Future<void> Function() action) async {
+    if (_isActionInProgress) return;
+    setState(() => _isActionInProgress = true);
+    await action();
+    if (mounted) {
+      setState(() => _isActionInProgress = false);
+    }
   }
 
   @override
@@ -675,13 +825,6 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // const Text(
-        //   '??',
-        //   style: TextStyle(
-        //     fontSize: 24,
-        //     fontWeight: FontWeight.w700,
-        //   ),
-        // ),
         const SizedBox(height: 16),
         _MissionFeatureTabBar(
           selected: _selectedTab,
@@ -690,7 +833,11 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
             setState(() => _selectedTab = tab);
           },
         ),
-        const SizedBox(height: 24),
+        if (widget.errorMessage != null) ...[
+          const SizedBox(height: 12),
+          _MissionEmptyCard(message: widget.errorMessage!),
+        ],
+        const SizedBox(height: 16),
         if (_selectedTab == _MissionTab.today)
           ..._buildOngoingSection()
         else
@@ -700,6 +847,9 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
   }
 
   List<Widget> _buildOngoingSection() {
+    final missions = widget.ongoingMissions;
+    final isLoading = widget.isLoading && missions.isEmpty;
+
     return [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -711,60 +861,76 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          Text(
-            DateFormat('yyyy/MM/dd').format(DateTime.now()),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => _runAction(widget.onRefresh),
+                icon: const Icon(Icons.refresh, size: 20),
+                color: const Color(0xFF3C86C0),
+                tooltip: '새로고침',
+              ),
+              Text(
+                DateFormat('yyyy/MM/dd').format(DateTime.now()),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
           ),
         ],
       ),
       const SizedBox(height: 12),
-      if (_ongoingMissions.isEmpty)
+      if (isLoading)
+        const _MissionLoadingCard(message: '도전 중인 미션을 불러오는 중...')
+      else if (missions.isEmpty)
         _MissionEmptyCard(message: '도전 중인 미션이 없습니다')
       else
-        ..._ongoingMissions.map(
+        ...missions.map(
           (mission) => _MissionOngoingCard(
-                data: mission,
-                onComplete: mission.progress >= 1.0
-                    ? () => _handleMissionComplete(mission)
-                    : null,
-              ),
+            data: mission,
+            isBusy: _isActionInProgress,
+            onComplete: () => _runAction(() => widget.onComplete(mission)),
+          ),
         ),
       const SizedBox(height: 32),
     ];
   }
 
   List<Widget> _buildWeeklySection() {
+    final missions = widget.availableMissions;
+    final isLoading = widget.isLoading && missions.isEmpty;
+
     return [
-      const Text(
-        '도전 가능한 미션',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            '도전 가능한 미션',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          IconButton(
+            onPressed: () => _runAction(widget.onRefresh),
+            icon: const Icon(Icons.refresh, size: 20),
+            color: const Color(0xFF3C86C0),
+            tooltip: '새로고침',
+          ),
+        ],
       ),
       const SizedBox(height: 12),
-      if (_availableMissions.isEmpty)
+      if (isLoading)
+        const _MissionLoadingCard(message: '도전 가능한 미션을 불러오는 중...')
+      else if (missions.isEmpty)
         _MissionEmptyCard(message: '도전 가능한 미션이 없습니다')
       else
-        ..._availableMissions.map(
+        ...missions.map(
           (mission) => _MissionAvailableCard(
             data: mission,
-            onStart: () => setState(() {
-              _availableMissions.remove(mission);
-              _ongoingMissions.add(
-                _MissionProgressItem(
-                  title: mission.title,
-                  description: mission.description,
-                  pointText: mission.pointText,
-                  pointValue: mission.pointValue,
-                  progress: 0.1,
-                ),
-              );
-              _selectedTab = _MissionTab.today;
-            }),
+            isBusy: _isActionInProgress,
+            onStart: () => _runAction(() => widget.onStart(mission)),
           ),
         ),
     ];
@@ -874,45 +1040,20 @@ class _MissionFeatureTabBar extends StatelessWidget {
   }
 }
 
-class _MissionProgressItem {
-  final String title;
-  final String description;
-  final String pointText;
-  final int pointValue;
-  final double progress;
-
-  const _MissionProgressItem({
-    required this.title,
-    required this.description,
-    required this.pointText,
-    required this.pointValue,
-    this.progress = 0.2,
-  });
-}
-
-class _MissionItem {
-  final String title;
-  final String description;
-  final String pointText;
-  final int pointValue;
-
-  const _MissionItem({
-    required this.title,
-    required this.description,
-    required this.pointText,
-    required this.pointValue,
-  });
-}
-
 class _MissionOngoingCard extends StatelessWidget {
-  final _MissionProgressItem data;
+  final MissionModel data;
   final VoidCallback? onComplete;
+  final bool isBusy;
 
-  const _MissionOngoingCard({required this.data, this.onComplete});
+  const _MissionOngoingCard({
+    required this.data,
+    this.onComplete,
+    this.isBusy = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bool canComplete = (data.progress >= 1.0) && onComplete != null;
+    final bool canComplete = onComplete != null && !isBusy;
     const Color blue = Color(0xFF3C86C0);
 
     return Container(
@@ -961,16 +1102,39 @@ class _MissionOngoingCard extends StatelessWidget {
               color: Colors.black54,
             ),
           ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: data.progress.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE1E7F3),
-              valueColor: const AlwaysStoppedAnimation<Color>(blue),
+          const SizedBox(height: 10),
+          if (data.placeName != null || data.distanceKm != null)
+            Row(
+              children: [
+                const Icon(Icons.place, size: 16, color: Color(0xFF6B7280)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    [
+                      if (data.placeName != null) data.placeName!,
+                      if (data.distanceKm != null)
+                        '${data.distanceKm!.toStringAsFixed(2)} km'
+                    ].join(' • '),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE1E7F3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '진행중',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: blue,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
@@ -982,13 +1146,22 @@ class _MissionOngoingCard extends StatelessWidget {
                   color: canComplete ? blue : const Color(0xFFB7C0CC),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  '완료',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                  ),
-                ),
+                child: isBusy
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        '완료',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -999,12 +1172,14 @@ class _MissionOngoingCard extends StatelessWidget {
 }
 
 class _MissionAvailableCard extends StatelessWidget {
-  final _MissionItem data;
+  final MissionModel data;
   final VoidCallback onStart;
+  final bool isBusy;
 
   const _MissionAvailableCard({
     required this.data,
     required this.onStart,
+    this.isBusy = false,
   });
 
   @override
@@ -1046,6 +1221,25 @@ class _MissionAvailableCard extends StatelessWidget {
                     color: Colors.black54,
                   ),
                 ),
+                if (data.placeName != null || data.address != null || data.distanceKm != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.place, size: 14, color: Color(0xFF6B7280)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          [
+                            if (data.placeName != null) data.placeName!,
+                            if (data.distanceKm != null)
+                              '${data.distanceKm!.toStringAsFixed(2)} km'
+                          ].join(' • '),
+                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -1063,21 +1257,30 @@ class _MissionAvailableCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               GestureDetector(
-                onTap: onStart,
+                onTap: isBusy ? null : onStart,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: blue,
+                    color: isBusy ? Colors.grey : blue,
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
-                    '도전',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: isBusy
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          '도전',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -1121,27 +1324,45 @@ class _MissionEmptyCard extends StatelessWidget {
   }
 }
 
-const List<_MissionProgressItem> _defaultOngoingMissions = [
-  _MissionProgressItem(
-    title: '~~~ 30분 산책',
-    description: '~~~ 근처에서 30분 이상 이동하기',
-    pointText: '+500P',
-    pointValue: 500,
-    progress: 0.6,
-  ),
-];
+class _MissionLoadingCard extends StatelessWidget {
+  final String message;
 
-const List<_MissionItem> _defaultAvailableMissions = [
-  _MissionItem(
-    title: '공원 3곳 탐방하기',
-    description: '천안 동남구 내 공원 3곳 도달',
-    pointText: '+750P',
-    pointValue: 750,
-  ),
-  _MissionItem(
-    title: '인근 체육시설 방문',
-    description: '인근 공원·체육시설 중 1곳 도착',
-    pointText: '+900P',
-    pointValue: 900,
-  ),
-];
+  const _MissionLoadingCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

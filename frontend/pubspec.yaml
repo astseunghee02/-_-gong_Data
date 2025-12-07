@@ -42,6 +42,7 @@ dependencies:
   pedometer: ^4.0.1
   geolocator: ^13.0.2
   permission_handler: ^11.3.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +69,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/pori/
     - assets/map_style.json
     - .env
 
