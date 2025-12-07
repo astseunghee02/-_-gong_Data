@@ -110,16 +110,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 40),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(40),
-                          child: Image.asset(
-                            'assets/images/Lv01_pori.png',
-                            width: 220,
-                            height: 220,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(height: 36),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Text(
