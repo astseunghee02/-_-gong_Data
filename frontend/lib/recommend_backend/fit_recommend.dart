@@ -1,20 +1,22 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'recommendation_models.dart';
 
 class RecommendService {
-  // TODO: 환경에 맞게 수정 (필요 시 .env 사용)
-  final String baseUrl = kIsWeb ? "http://127.0.0.1:8000" : "http://10.0.2.2:8000";
-
   Future<RecommendationResponse> getRecommendations({
     required String ageGroup,
     required String sex,
     required double heightCm,
     required double weightKg,
   }) async {
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null || baseUrl.isEmpty) {
+      throw Exception("API_BASE_URL not configured. Please check your .env file.");
+    }
+
     final url = Uri.parse("$baseUrl/recommendations");
 
     final response = await http.post(
