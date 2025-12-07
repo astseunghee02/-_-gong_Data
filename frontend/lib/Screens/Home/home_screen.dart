@@ -1,4 +1,4 @@
-import 'dart:math';
+ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
@@ -654,12 +654,12 @@ String _getRandomMotivationMessage() {
 
 const List<String> _motivationMessages = [
   '오늘도 공공체육과 함께 활기차게',
-  '오늘도 Work-Flow와 함께 건강한 하루를 시작해볼까요',
+  '오늘도 Work-Flow와 함께 \n건강한 하루를 시작해볼까요',
   '오늘도 Work-Flow와 함께 활기차게!',
   '가까운 공공체육시설에서 오늘도 한 걸음 더!',
-  '오늘도 한 번 더! 공공체육시설에서 몸과 마음을 깨워요',
-  '운동하기 좋은 날! Work-Flow와 함께 움직여봐요',
-  '가까운 체육시설에서 가볍게 몸을 풀어볼까요?',
+  '오늘도 한 번 더! \n공공체육시설에서 몸과 마음을 깨워요',
+  '운동하기 좋은 날! \nWork-Flow와 함께 움직여봐요',
+  '가까운 체육시설에서 가볍게 \n몸을 풀어볼까요?',
 ];
 
 String _getCharacterImage(int level) {

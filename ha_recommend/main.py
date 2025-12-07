@@ -1,4 +1,5 @@
 # main.py
+from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -76,14 +77,13 @@ def fetch_prescriptions_for_level(
 ) -> List[str]:
     """
     연령대 + 성별 + BMI 구간 기준으로 행을 고르고,
-    행의 '마지막 컬럼'을 운동처방 텍스트로 사용한다.
-    (컬럼 이름이 살짝 달라도 동작하도록)
+    '오늘 요일'에 따라 매일 다른 처방 세트를 돌려준다.
+    - 월~일: weekday 0~6
     """
     conn = get_connection()
     cur = conn.cursor()
 
     # BMI = 체중(kg) / (키(m)^2)
-    # 키/체중은 TEXT로 저장되었을 수 있으니 REAL로 캐스팅해서 계산
     if level == "하":
         sql = """
         SELECT *
@@ -99,9 +99,8 @@ def fetch_prescriptions_for_level(
              ((CAST(MESURE_IEM_001_VALUE AS REAL)/100.0) *
               (CAST(MESURE_IEM_001_VALUE AS REAL)/100.0)) >= 25.0)
           )
-        LIMIT ?
         """
-        cur.execute(sql, (age_group, sex, limit))
+        cur.execute(sql, (age_group, sex))
     else:
         if level == "상":
             bmi_min, bmi_max = 18.5, 23.0
@@ -118,26 +117,41 @@ def fetch_prescriptions_for_level(
             ((CAST(MESURE_IEM_001_VALUE AS REAL)/100.0) *
              (CAST(MESURE_IEM_001_VALUE AS REAL)/100.0))
           ) BETWEEN ? AND ?
-        LIMIT ?
         """
-        cur.execute(sql, (age_group, sex, bmi_min, bmi_max, limit))
+        cur.execute(sql, (age_group, sex, bmi_min, bmi_max))
 
     rows = cur.fetchall()
     conn.close()
 
-    # 각 행의 마지막 컬럼을 '운동처방내용' 으로 사용
-    pres = [r[-1] for r in rows if r and r[-1] is not None]
+    # 각 행의 마지막 컬럼을 '운동처방내용'으로 사용
+    all_pres = [r[-1] for r in rows if r and r[-1] is not None]
 
-    # 혹시 해당 구간 데이터가 하나도 없을 때 대비 기본 문구
-    if not pres:
+    # 데이터가 거의 없으면 기존 기본 문구 사용
+    if not all_pres:
         if level == "상":
-            pres.append("유산소와 근력운동을 함께 진행해 전신 체력을 향상시키세요.")
+            return ["유산소와 근력운동을 함께 진행해 전신 체력을 향상시키세요."]
         elif level == "중":
-            pres.append("빠른 걷기와 가벼운 조깅을 주 3~4회 실천해 보세요.")
+            return ["빠른 걷기와 가벼운 조깅을 주 3~4회 실천해 보세요."]
         else:
-            pres.append("걷기, 실내 자전거 등 저충격 유산소 운동을 꾸준히 해주세요.")
+            return ["걷기, 실내 자전거 등 저충격 유산소 운동을 꾸준히 해주세요."]
 
-    return pres
+    # 🔹 요일 기준 로테이션: 월(0)~일(6)
+    weekday = datetime.now().weekday()  # 0=월, 6=일
+    n = len(all_pres)
+
+    if n <= limit:
+        # 후보가 적으면 그냥 다 보여줌
+        return all_pres
+
+    # 오늘 요일에 따라 시작 위치 결정
+    start = (weekday * limit) % n
+
+    selected: List[str] = []
+    for i in range(limit):
+        idx = (start + i) % n
+        selected.append(all_pres[idx])
+
+    return selected
 
 
 
