@@ -218,6 +218,8 @@ class _MapScreenState extends State<MapScreen> {
                 title: p.name,
                 snippet: '${p.distance} km',
               ),
+              // 주변 추천 장소는 기존 미션 색상(블루)으로 표시
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
             ),
           )
           .toSet();
@@ -266,7 +268,8 @@ class _MapScreenState extends State<MapScreen> {
               title: mission.title,
               snippet: mission.placeName ?? '',
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+            // 도전 중인 미션은 기본 마커 색상(레드)으로 표시
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           ),
         )
         .toSet();

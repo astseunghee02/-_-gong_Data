@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		jAsJuCzhWTqFtlupu5uJs1z0n6s=
+		3StZ6b5WyY32S1OBPjT7X/+qbBI=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,7 +54,7 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		iHap2lHZWhtqBekeW/fbVn5NxXM=
+		nRTbmbt8xBEIAZE/S3CNxotzgnk=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<data>
@@ -62,7 +62,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
-		n3WSnF8c9jj2GZ2xvYrdgbBkDhw=
+		E/fs+ebhb2FSpFyhPuBdsBEBqU4=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
 		<data>
@@ -119,6 +119,10 @@
 		<key>Frameworks/App.framework/flutter_assets/assets/images/next.svg</key>
 		<data>
 		jS8OHT7zlnYmd+/q8H2bFALU+vE=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/onPori.jpg</key>
+		<data>
+		slktt/3tlCp7uD4ZCM9QZDiV2ZU=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/pori-user.png</key>
 		<data>
@@ -178,7 +182,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		ijvtWCx5gpAvhthywPljdgQlzyg=
+		C/TJP7o6Xh14wUXFmH3IcTs5YLY=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -306,7 +310,7 @@
 		</data>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple</key>
 		<data>
-		Ucpv1HW06i56BiBDGoX0sku1G/g=
+		JQiDL3WRHrHfmjpeHyBj5eVSGLY=
 		</data>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple_privacy.bundle/Info.plist</key>
 		<data>
@@ -326,7 +330,7 @@
 		</data>
 		<key>Frameworks/pedometer.framework/pedometer</key>
 		<data>
-		F+SWFK7OOGSzu6otZUNFDY0aqAs=
+		97sJqBU2r6ips3unsh12LbSan1s=
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/Info.plist</key>
 		<data>
@@ -338,7 +342,7 @@
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation</key>
 		<data>
-		MNBv0NwHP7F2sxCU47hybrlyLQM=
+		Rsbo2pzHf6NQTdVrRJC3JyCzSx8=
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
 		<data>
@@ -1170,7 +1174,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		XiKtFSIsIXK2/t5xlhTzP/KL1Aw=
+		kKhToi+LPouzAvAtv9rfnZQ4Ib0=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -1178,11 +1182,11 @@
 		</data>
 		<key>Runner.debug.dylib</key>
 		<data>
-		v/QYooC0Po1Zx9urXGY9dat34JQ=
+		9HykEp1bfVT+im9ptvEFCo8m7Yg=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		XLTIAHCKPq925q4IUx89p9vQpOU=
+		NLZoUoS8JlgkGyd8S3Z/mVxxW7I=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -1281,7 +1285,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pSPyvBDWuwD4A6CVtR+6qK4WnKG+EsgR71K5dRlHgv8=
+			bEvzIH7LvaV9DGl77ea0BOaK8IR0J1bFWexq6wCCMm0=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -1295,7 +1299,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			9Q2XoxMf5DfgwcxsZ3/syG8sDmxTVDTMz0c3YRXj+l4=
+			o8/y+XwOIERQkT+UQ4FMLmavDkHDbmpNGRLM2EJtBQQ=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
@@ -1309,7 +1313,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			wrGfPTv0AtaY+G7PlHRWTrCWiYB2/O5QNn/JjPyMGBk=
+			3qIBLKtjOVyoIkYWtX6FWqzTD/5mcEzWh5YtCkgKda8=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
@@ -1408,6 +1412,13 @@
 			<key>hash2</key>
 			<data>
 			GiyO/5rb4m1IHHGT2f9W0HeFrZP62eSZSQKTr8LARdY=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/onPori.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			e80UpDCbVCDsUI7cGalg/G6R3MfIld/pRwjx7pWwsT0=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/assets/images/pori-user.png</key>
@@ -1512,7 +1523,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			b2VcxuJIyCyRxAPJl84rHnBUOY+rMV3P9X7MBFmB6Ug=
+			U4e/AWBvfYLnKCfGHVhqfPJmRr22sgD3mhzH+E7+ECE=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
@@ -1736,7 +1747,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			5U/MJY5rvlrnqEoxGr+G/4DfuJEjhF4QS/fhMxFk53I=
+			ZBdt29wWBc7tcLOObIf7LsFBXUHgwfjbn7O9eFoc0q0=
 			</data>
 		</dict>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple_privacy.bundle/Info.plist</key>
@@ -1771,7 +1782,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			DyvftIAA9APVfL1V74NTBsJWs4oGvq/lU6hzIVr4w/0=
+			bHRFm1B3TTV9iy4llnz0wqVpgjlG8C/IIGqSgzUg/AM=
 			</data>
 		</dict>
 		<key>Frameworks/shared_preferences_foundation.framework/Info.plist</key>
@@ -1792,7 +1803,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			yonQ7BHK2UK+zYEGzrWTRJkO/kfgppeNutoEq8j0wo8=
+			hNFOsdMb0Knxgh9FDJ+Z5OogwtbJPVc+nbe8Skl31g0=
 			</data>
 		</dict>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
@@ -2897,14 +2908,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pZ+3dlBpEM6pHncTxANfCn/XeAE/dNvdkPrhhe1pMnE=
+			OXmWE5UGXVs6msVWoBk+gOu1YCf0u4GIEOEiGd7LHoM=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			OmRZzCTL6YZjePIHMYFpFrXwwMzCLHnd3lCNrfMQjLU=
+			gc4/qi4CZTXmatdVyFzcJCv35r2NMC5GkeXOphKeqEs=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>
