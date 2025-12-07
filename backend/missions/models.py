@@ -106,6 +106,25 @@ class UserMission(models.Model):
 
         return True
 
+    def cancel_mission(self):
+        """진행 중 미션을 다시 도전 가능 상태로 되돌림"""
+        if self.status != 'ongoing':
+            return False
+
+        self.status = 'available'
+        self.started_at = None
+        self.completed_at = None
+        self.points_earned = 0
+        self.distance_from_user = None
+        self.save(update_fields=[
+            'status',
+            'started_at',
+            'completed_at',
+            'points_earned',
+            'distance_from_user',
+        ])
+        return True
+
     @classmethod
     def get_user_stats(cls, user):
         """사용자 미션 통계"""

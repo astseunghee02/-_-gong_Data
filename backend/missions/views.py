@@ -171,6 +171,32 @@ class CompleteMissionView(APIView):
             return Response({'error': '진행중인 미션을 찾을 수 없습니다.'}, status=404)
 
 
+class CancelMissionView(APIView):
+    """진행중인 미션 취소"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, mission_id):
+        try:
+            user_mission = UserMission.objects.get(
+                user=request.user,
+                mission_id=mission_id,
+                status='ongoing'
+            )
+
+            success = user_mission.cancel_mission()
+            if not success:
+                return Response({'error': '미션을 취소할 수 없습니다.'}, status=400)
+
+            serializer = UserMissionSerializer(user_mission)
+            return Response({
+                'message': '미션을 취소했어요.',
+                'mission': serializer.data
+            })
+
+        except UserMission.DoesNotExist:
+            return Response({'error': '진행중인 미션을 찾을 수 없습니다.'}, status=404)
+
+
 class MissionStatsView(APIView):
     """미션 통계"""
     permission_classes = [IsAuthenticated]

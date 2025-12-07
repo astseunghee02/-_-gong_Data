@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		CCwOWxrpR3vyJoqHfSDGNuV8DFY=
+		jAsJuCzhWTqFtlupu5uJs1z0n6s=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,11 +54,11 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		NU2hpTclcZGMEedAst9MJAgDjQY=
+		iHap2lHZWhtqBekeW/fbVn5NxXM=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<data>
-		z366R40ZiiMStjYRGtRbtt6scTA=
+		fBuVBqlHF/MK4OrdbcWXuGe6nW8=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
@@ -178,7 +178,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		Xn10xuVwVP/wHU6RU/Q6MAYMh6w=
+		ijvtWCx5gpAvhthywPljdgQlzyg=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -306,7 +306,7 @@
 		</data>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple</key>
 		<data>
-		riwW5SF69zqfPSXIeFWEdNiL6pQ=
+		Ucpv1HW06i56BiBDGoX0sku1G/g=
 		</data>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple_privacy.bundle/Info.plist</key>
 		<data>
@@ -326,7 +326,7 @@
 		</data>
 		<key>Frameworks/pedometer.framework/pedometer</key>
 		<data>
-		JRdeJG/3ka6CsuRHlZMo5Hxl/RA=
+		F+SWFK7OOGSzu6otZUNFDY0aqAs=
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/Info.plist</key>
 		<data>
@@ -338,7 +338,7 @@
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation</key>
 		<data>
-		xnscKhJhJgpZQVD9FRtQf6wHPxQ=
+		MNBv0NwHP7F2sxCU47hybrlyLQM=
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
 		<data>
@@ -1170,7 +1170,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		hIVDVbxw0l+4saU17nWXwjbny+E=
+		XiKtFSIsIXK2/t5xlhTzP/KL1Aw=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -1178,11 +1178,11 @@
 		</data>
 		<key>Runner.debug.dylib</key>
 		<data>
-		TGP7FTKH6K3KAzDQi9G4L+VCUg4=
+		v/QYooC0Po1Zx9urXGY9dat34JQ=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		Xy0FukqkdbepUZ6UOUbvdgTKgcs=
+		XLTIAHCKPq925q4IUx89p9vQpOU=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -1281,7 +1281,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			siQ34RcWcDqurgPxilU/sFoeCR4vpA3XANgMMJizMdc=
+			pSPyvBDWuwD4A6CVtR+6qK4WnKG+EsgR71K5dRlHgv8=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -1295,14 +1295,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			tI18QSrNVaUKHHFWQI1QXZ5/q6XaTTdfxri4LG/rbsw=
+			9Q2XoxMf5DfgwcxsZ3/syG8sDmxTVDTMz0c3YRXj+l4=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/.env</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Z+bpv22F9vvzu66bs7shU6zPZSjT+3lqageuObl5G8E=
+			RkJ9GYYyXiTIAc8s2k0wAssOCalQfdt/FOSiNRjWC5g=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
@@ -1512,7 +1512,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			LSv8KC3lIv4fPV5NGhcw2nVLQLng6gON23bYXB7ASbc=
+			b2VcxuJIyCyRxAPJl84rHnBUOY+rMV3P9X7MBFmB6Ug=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
@@ -1736,7 +1736,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			fNlL3x0bQ6Jkpdc3/pds6ev/o/oAGfWuIWNpr8VFZg0=
+			5U/MJY5rvlrnqEoxGr+G/4DfuJEjhF4QS/fhMxFk53I=
 			</data>
 		</dict>
 		<key>Frameworks/geolocator_apple.framework/geolocator_apple_privacy.bundle/Info.plist</key>
@@ -1771,7 +1771,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ui6ENm8HBVPsEac7w6Q7ZZg4YG18ns0v0P/qk2tk/90=
+			DyvftIAA9APVfL1V74NTBsJWs4oGvq/lU6hzIVr4w/0=
 			</data>
 		</dict>
 		<key>Frameworks/shared_preferences_foundation.framework/Info.plist</key>
@@ -1792,7 +1792,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			wjA8KxQxEdXFvF6MhZ8vQo5wgjP9iO/mo8wbAQlux4s=
+			yonQ7BHK2UK+zYEGzrWTRJkO/kfgppeNutoEq8j0wo8=
 			</data>
 		</dict>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
@@ -2897,14 +2897,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Ep1SKj4ZGJ7eeAZr4cZmoR3CITw/I70Pxk8xwSUuzPw=
+			pZ+3dlBpEM6pHncTxANfCn/XeAE/dNvdkPrhhe1pMnE=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			TAqkE6tyefqKqOn3pLMGiXSvBWNzNDjx2uO1G5BI9Y0=
+			OmRZzCTL6YZjePIHMYFpFrXwwMzCLHnd3lCNrfMQjLU=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>

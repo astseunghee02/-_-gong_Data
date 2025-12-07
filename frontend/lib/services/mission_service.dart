@@ -159,6 +159,28 @@ class MissionService {
       return null;
     }
   }
+
+  Future<MissionModel?> cancelMission(int missionId) async {
+    final headers = await _headers();
+    if (headers == null) return null;
+
+    try {
+      final res = await http.post(
+        Uri.parse('${_baseUrl!}/api/missions/$missionId/cancel/'),
+        headers: headers,
+      );
+
+      if (res.statusCode != 200) return null;
+
+      final data = json.decode(res.body) as Map<String, dynamic>;
+      return MissionModel.fromJson(
+        data['mission'] as Map<String, dynamic>? ?? {},
+      );
+    } catch (e) {
+      print('❌ cancelMission error: $e');
+      return null;
+    }
+  }
 }
 
 class MissionModel {
@@ -172,6 +194,8 @@ class MissionModel {
   final double? distanceKm;
   final String? placeName;
   final String? address;
+  final double? latitude;
+  final double? longitude;
 
   MissionModel({
     required this.userMissionId,
@@ -184,6 +208,8 @@ class MissionModel {
     this.distanceKm,
     this.placeName,
     this.address,
+    this.latitude,
+    this.longitude,
   });
 
   bool get isAvailable => status == 'available';
@@ -206,6 +232,8 @@ class MissionModel {
       distanceKm: (json['distance_from_user'] as num?)?.toDouble(),
       placeName: place['name'] as String?,
       address: place['address'] as String?,
+      latitude: (place['latitude'] as num?)?.toDouble(),
+      longitude: (place['longitude'] as num?)?.toDouble(),
     );
   }
 }

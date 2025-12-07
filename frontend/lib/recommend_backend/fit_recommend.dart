@@ -1,13 +1,18 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'recommendation_models.dart';
 
 class RecommendService {
-  // TODO: 환경에 맞게 수정 (필요 시 .env 사용)
-  final String baseUrl = kIsWeb ? "http://127.0.0.1:8000" : "http://10.0.2.2:8000";
+  String get _baseUrl {
+    final base = dotenv.env['API_BASE_URL'];
+    if (base == null || base.isEmpty) {
+      throw Exception('API_BASE_URL이 설정되지 않았습니다.');
+    }
+    return base;
+  }
 
   Future<RecommendationResponse> getRecommendations({
     required String ageGroup,
@@ -15,7 +20,7 @@ class RecommendService {
     required double heightCm,
     required double weightKg,
   }) async {
-    final url = Uri.parse("$baseUrl/recommendations");
+    final url = Uri.parse("$_baseUrl/recommendations");
 
     final response = await http.post(
       url,

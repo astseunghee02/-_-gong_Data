@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScreenLayout(
       title: '다시 만나서 반가워요',
-      subtitle: '핏 메이트와 함께 오늘 하루를 시작해볼까요?',
+      subtitle: '워크 플로우와 함께 오늘 하루를 시작해볼까요?',
       bottomAction: _AuthBottomAction(
         label: '계정이 필요하신가요?',
         actionLabel: '회원가입',
@@ -329,7 +329,7 @@ class _AuthHero extends StatelessWidget {
     return Column(
       children: const [
         Text(
-          'Fit Mate',
+          'Work flow',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,

@@ -60,7 +60,7 @@ class _SignupProfileStepOneState extends State<SignupProfileStepOne> {
   @override
   Widget build(BuildContext context) {
     return SignupProfileShell(
-      title: 'Fit Mate 회원가입',
+      title: 'Work flow 회원가입',
       subtitle: '기본 정보를 입력하고 다음 단계로 이동하세요.',
       child: Form(
         key: _formKey,

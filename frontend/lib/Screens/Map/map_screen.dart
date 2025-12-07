@@ -30,6 +30,8 @@ class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
   final LocationService _locationService = LocationService();
   final Set<Marker> _markers = {};
+  final Set<Marker> _nearbyMarkers = {};
+  final Set<Marker> _ongoingMissionMarkers = {};
   List<_NearbyPlace> _nearbyPlaces = [];
   bool _isLoadingNearby = false;
   String? _nearbyError;
@@ -146,6 +148,7 @@ class _MapScreenState extends State<MapScreen> {
         _availableMissions = available;
         _ongoingMissions = ongoing;
       });
+      _updateMissionMarkers(ongoing);
     } catch (e) {
       print('❌ 미션 데이터 로드 오류: $e');
       if (!mounted) return;
@@ -221,9 +224,13 @@ class _MapScreenState extends State<MapScreen> {
 
       setState(() {
         _nearbyPlaces = places;
-        _markers
+        _nearbyMarkers
           ..clear()
           ..addAll(markers);
+        _markers
+          ..clear()
+          ..addAll(_nearbyMarkers)
+          ..addAll(_ongoingMissionMarkers);
         _isLoadingNearby = false;
       });
     } catch (e) {
@@ -243,6 +250,35 @@ class _MapScreenState extends State<MapScreen> {
       _ongoingMissionCount = stats.ongoing;
       _weeklyCompleted = stats.weeklyCompleted;
       _totalCompleted = stats.totalCompleted;
+    });
+  }
+
+  void _updateMissionMarkers(List<MissionModel> ongoing) {
+    if (!mounted) return;
+
+    final markers = ongoing
+        .where((mission) => mission.latitude != null && mission.longitude != null)
+        .map(
+          (mission) => Marker(
+            markerId: MarkerId('mission_${mission.missionId}'),
+            position: LatLng(mission.latitude!, mission.longitude!),
+            infoWindow: InfoWindow(
+              title: mission.title,
+              snippet: mission.placeName ?? '',
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          ),
+        )
+        .toSet();
+
+    setState(() {
+      _ongoingMissionMarkers
+        ..clear()
+        ..addAll(markers);
+      _markers
+        ..clear()
+        ..addAll(_nearbyMarkers)
+        ..addAll(_ongoingMissionMarkers);
     });
   }
 
@@ -295,6 +331,24 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('미션 완료! +${result.pointsEarned}P 획득')),
+    );
+    await _refreshMissionsAndStats(_currentPosition);
+  }
+
+  Future<void> _handleCancelMission(MissionModel mission) async {
+    final result = await _missionService.cancelMission(mission.missionId);
+
+    if (result == null) {
+      if (!mounted) return;
+      setState(() {
+        _missionError = '미션을 취소하지 못했습니다. 다시 시도해주세요.';
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('미션을 취소했어요.')),
     );
     await _refreshMissionsAndStats(_currentPosition);
   }
@@ -487,6 +541,7 @@ class _MapScreenState extends State<MapScreen> {
                   errorMessage: _missionError,
                   onStart: _handleStartMission,
                   onComplete: _handleCompleteMission,
+                  onCancel: _handleCancelMission,
                   onRefresh: () => _refreshMissionsAndStats(_currentPosition),
                 ),
               ),
@@ -790,6 +845,7 @@ class _MissionFeaturePanel extends StatefulWidget {
   final String? errorMessage;
   final Future<void> Function(MissionModel) onStart;
   final Future<void> Function(MissionModel) onComplete;
+  final Future<void> Function(MissionModel) onCancel;
   final Future<void> Function() onRefresh;
 
   const _MissionFeaturePanel({
@@ -800,6 +856,7 @@ class _MissionFeaturePanel extends StatefulWidget {
     required this.errorMessage,
     required this.onStart,
     required this.onComplete,
+    required this.onCancel,
     required this.onRefresh,
   });
 
@@ -891,6 +948,7 @@ class _MissionFeaturePanelState extends State<_MissionFeaturePanel> {
             data: mission,
             isBusy: _isActionInProgress,
             onComplete: () => _runAction(() => widget.onComplete(mission)),
+            onCancel: () => _runAction(() => widget.onCancel(mission)),
           ),
         ),
       const SizedBox(height: 32),
@@ -1043,17 +1101,20 @@ class _MissionFeatureTabBar extends StatelessWidget {
 class _MissionOngoingCard extends StatelessWidget {
   final MissionModel data;
   final VoidCallback? onComplete;
+  final VoidCallback? onCancel;
   final bool isBusy;
 
   const _MissionOngoingCard({
     required this.data,
     this.onComplete,
+    this.onCancel,
     this.isBusy = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final bool canComplete = onComplete != null && !isBusy;
+    final bool canCancel = onCancel != null && !isBusy;
     const Color blue = Color(0xFF3C86C0);
 
     return Container(
@@ -1136,34 +1197,55 @@ class _MissionOngoingCard extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: canComplete ? onComplete : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: canComplete ? blue : const Color(0xFFB7C0CC),
-                  borderRadius: BorderRadius.circular(999),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              GestureDetector(
+                onTap: canCancel ? onCancel : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFB7C0CC)),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '취소',
+                    style: TextStyle(
+                      color: canCancel ? const Color(0xFF4B5563) : const Color(0xFF9CA3AF),
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-                child: isBusy
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        '완료',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                        ),
-                      ),
               ),
-            ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: canComplete ? onComplete : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: canComplete ? blue : const Color(0xFFB7C0CC),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: isBusy
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          '완료',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

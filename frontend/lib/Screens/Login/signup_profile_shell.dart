@@ -100,7 +100,7 @@ class SignupProfileHero extends StatelessWidget {
     return Column(
       children: const [
         Text(
-          'Fit Mate',
+          'Work flow',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
