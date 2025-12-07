@@ -84,7 +84,7 @@ class _SignupProfileStepState extends State<SignupProfileStep> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'username': widget.username,
-          'email': '${widget.username}@fitmate.com',
+          'email': '${widget.username}@work-flow.com',
           'password': widget.password,
         }),
       );

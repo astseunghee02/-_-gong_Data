@@ -34,7 +34,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _OnboardingPageData(
       backgroundColor: AppColors.background,
-      title: '핏메이트, 포리와 함께 운동을 시작해보세요',
+      title: 'Work-Flow, 포리와 함께 운동을 시작해보세요',
       subtitle:
       '오늘의 운동 완료 → 포인트 적립 → 레벨업!',
       isLast: true,
