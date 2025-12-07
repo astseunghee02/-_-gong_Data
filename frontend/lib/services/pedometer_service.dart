@@ -8,7 +8,7 @@ class PedometerService {
   PedometerService._internal();
 
   StreamSubscription<StepCount>? _stepCountStream;
-  StreamSubscription<PedalEvent>? _pedestrianStatusStream;
+  StreamSubscription<PedestrianStatus>? _pedestrianStatusStream;
 
   int _currentSteps = 0;
   String _pedestrianStatus = 'stopped';
@@ -73,7 +73,7 @@ class PedometerService {
   }
 
   /// 걷기 상태 변경 콜백
-  void _onPedestrianStatusChanged(PedalEvent event) {
+  void _onPedestrianStatusChanged(PedestrianStatus event) {
     _pedestrianStatus = event.status;
     print('걷기 상태: $_pedestrianStatus');
   }

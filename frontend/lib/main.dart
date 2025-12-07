@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
+      initialRoute: '/onboarding',
       onGenerateRoute: (settings) {
         if (settings.name == '/onboarding') {
           return MaterialPageRoute(builder: (_) => const OnboardingScreen());

@@ -1,18 +1,74 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../constants/app_colors.dart';
+import '../../services/pedometer_service.dart';
 import '../../widgets/app_bottom_nav_items.dart';
 import '../../widgets/community_sections.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
-class StatusScreen extends StatelessWidget {
+class StatusScreen extends StatefulWidget {
   const StatusScreen({super.key});
 
   @override
+  State<StatusScreen> createState() => _StatusScreenState();
+}
+
+class _StatusScreenState extends State<StatusScreen> {
+  final PedometerService _pedometerService = PedometerService();
+  StreamSubscription<int>? _stepsSubscription;
+
+  int _steps = 0;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPedometer();
+  }
+
+  Future<void> _initPedometer() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final started = await _pedometerService.startTracking();
+    if (!started) {
+      setState(() {
+        _isLoading = false;
+        _error = '만보기 권한을 허용해주세요.';
+      });
+      return;
+    }
+
+    _stepsSubscription = _pedometerService.stepsStream.listen((value) {
+      setState(() {
+        _steps = value;
+      });
+    });
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _stepsSubscription?.cancel();
+    _pedometerService.stopTracking();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final calories = (_steps * 0.04).toStringAsFixed(1); // 대략 칼로리 추정
+    final distanceKm = (_steps * 0.00075).toStringAsFixed(2); // 평균 보폭 0.75m 가정
+
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: SafeArea(
@@ -45,19 +101,27 @@ class StatusScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _DateSelector(),
-                    SizedBox(height: 16),
-                    _MapPreviewCard(),
-                    SizedBox(height: 16),
-                    _StepCountSection(),
-                    SizedBox(height: 16),
-                    _SummaryStatsRow(),
-                    SizedBox(height: 24),
-                    _ExerciseLevelSection(),
-                    SizedBox(height: 80 / 3),
-                    _StatusFitnessComparisonSection(),
-                    SizedBox(height: 24),
+                  children: [
+                    const _DateSelector(),
+                    const SizedBox(height: 16),
+                    const _MapPreviewCard(),
+                    const SizedBox(height: 16),
+                    _StepCountSection(
+                      steps: _steps,
+                      isLoading: _isLoading,
+                      error: _error,
+                      onRefresh: _initPedometer,
+                    ),
+                    const SizedBox(height: 16),
+                    _SummaryStatsRow(
+                      calories: calories,
+                      distance: distanceKm,
+                    ),
+                    const SizedBox(height: 24),
+                    const _ExerciseLevelSection(),
+                    const SizedBox(height: 80 / 3),
+                    const _StatusFitnessComparisonSection(),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -312,50 +376,91 @@ class _MapPreviewCard extends StatelessWidget {
 }
 
 class _StepCountSection extends StatelessWidget {
-  const _StepCountSection();
+  final int steps;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRefresh;
+
+  const _StepCountSection({
+    required this.steps,
+    required this.isLoading,
+    required this.error,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: const [
+    Widget content;
+    if (isLoading) {
+      content = const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    } else if (error != null) {
+      content = Column(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.redAccent, size: 28),
+          const SizedBox(height: 6),
           Text(
-            '4880',
-            style: TextStyle(
+            error!,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+          TextButton(
+            onPressed: onRefresh,
+            child: const Text('다시 시도'),
+          ),
+        ],
+      );
+    } else {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            '$steps',
+            style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w800,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 4),
-          Text(
+          const SizedBox(height: 4),
+          const Text(
             '걸음 수',
             style: TextStyle(
-              fontSize: 17  ,
+              fontSize: 17,
               color: Colors.black54,
             ),
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
+      );
+    }
+
+    return Center(child: content);
   }
 }
 
 class _SummaryStatsRow extends StatelessWidget {
-  const _SummaryStatsRow();
+  final String calories;
+  final String distance;
+
+  const _SummaryStatsRow({
+    required this.calories,
+    required this.distance,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
-        _SummaryItem(label: '소모 칼로리', value: '480kcal'),
-        SizedBox(width: 16),
-        _SummaryItem(label: '운동 시간', value: '24:06'),
-        SizedBox(width: 16),
-        _SummaryItem(label: '이동 거리', value: '4.84km'),
+      children: [
+        _SummaryItem(label: '소모 칼로리', value: '$calories kcal'),
+        const SizedBox(width: 16),
+        const _SummaryItem(label: '운동 시간', value: '알 수 없음'),
+        const SizedBox(width: 16),
+        _SummaryItem(label: '이동 거리', value: '${distance}km'),
       ],
     );
   }
